@@ -1,5 +1,7 @@
 package cscie97.asn1.knowledge.engine;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.util.Set;
 
 /**
@@ -59,7 +61,7 @@ public class QueryEngine {
      * @throws QueryEngineException if an error occurs while reading the file
      */
     public void executeQueryFile(String fileName) throws QueryEngineException {
-        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(fileName))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 executeQuery(line);
