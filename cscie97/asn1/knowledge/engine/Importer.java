@@ -15,7 +15,7 @@ public class Importer {
      * @param fileName the name of the file containing triples
      * @throws Exception if an error occurs while reading the file or parsing a line
      */
-    public void importTripleFile(String fileName) throws Exception {
+    public void importTripleFile(String fileName) throws ImportException {
         try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
             String line;
             int lineNumber = 0;
