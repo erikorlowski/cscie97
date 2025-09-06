@@ -25,7 +25,7 @@ public class Triple {
         this.predicate = predicate;
         this.object = object;
         this.createDate = System.currentTimeMillis() / 1000L; // Set to current UNIX timestamp
-        this.identifier = subject.getIdentifier() + " " + predicate.getIdentifier() + " " + object.getIdentifier();
+        this.identifier = subject.getIdentifier() + " " + predicate.getIdentifier() + " " + object.getIdentifier() + ".";
     }
 
     /**
