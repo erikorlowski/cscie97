@@ -52,6 +52,8 @@ public class QueryEngine {
                 System.out.println(triple.getIdentifier());
             }
         }
+
+        System.out.println();
     }
 
     /**

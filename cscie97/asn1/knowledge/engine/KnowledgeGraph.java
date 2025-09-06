@@ -40,7 +40,8 @@ public class KnowledgeGraph {
      * @return the Node with the specified identifier
      */
     public Node getNode(String identifier) {
-        return nodeMap.putIfAbsent(identifier, new Node(identifier));
+        nodeMap.putIfAbsent(identifier, new Node(identifier));
+        return nodeMap.get(identifier);
     }
 
     /**
@@ -50,7 +51,8 @@ public class KnowledgeGraph {
      * @return the Predicate with the specified identifier
      */
     public Predicate getPredicate(String identifier) {
-        return predicateMap.putIfAbsent(identifier, new Predicate(identifier));
+        predicateMap.putIfAbsent(identifier, new Predicate(identifier));
+        return predicateMap.get(identifier);
     }
 
     /**
@@ -65,7 +67,8 @@ public class KnowledgeGraph {
      */
     public Triple getTriple(Node subject, Predicate predicate, Node object) {
         Triple tripleToAdd = new Triple(subject, predicate, object);
-        return tripleMap.putIfAbsent(tripleToAdd.getIdentifier(), tripleToAdd);
+        tripleMap.putIfAbsent(tripleToAdd.getIdentifier(), tripleToAdd);
+        return tripleMap.get(tripleToAdd.getIdentifier());
     }
 
     /**
@@ -83,13 +86,13 @@ public class KnowledgeGraph {
         Triple triple = getTriple(subjectNode, predicateObject, objectNode);
 
         addPotentialQueryToSet(triple.getIdentifier(), triple);
-        addPotentialQueryToSet(subjectNode.getIdentifier() + " " + predicateObject.getIdentifier() + " ?", triple);
-        addPotentialQueryToSet(subjectNode.getIdentifier() + " ? " + objectNode.getIdentifier(), triple); 
-        addPotentialQueryToSet(subjectNode.getIdentifier() + " ? ?", triple);
-        addPotentialQueryToSet("? " + predicateObject.getIdentifier() + " " + objectNode.getIdentifier(), triple);
-        addPotentialQueryToSet("? " + predicateObject.getIdentifier() + " ?", triple);
-        addPotentialQueryToSet("? ? " + objectNode.getIdentifier(), triple);
-        addPotentialQueryToSet("? ? ?", triple);
+        addPotentialQueryToSet(subjectNode.getIdentifier() + " " + predicateObject.getIdentifier() + " ?.", triple);
+        addPotentialQueryToSet(subjectNode.getIdentifier() + " ? " + objectNode.getIdentifier() + ".", triple); 
+        addPotentialQueryToSet(subjectNode.getIdentifier() + " ? ?.", triple);
+        addPotentialQueryToSet("? " + predicateObject.getIdentifier() + " " + objectNode.getIdentifier() + ".", triple);
+        addPotentialQueryToSet("? " + predicateObject.getIdentifier() + " ?.", triple);
+        addPotentialQueryToSet("? ? " + objectNode.getIdentifier() + ".", triple);
+        addPotentialQueryToSet("? ? ?.", triple);
     }
 
     /**
@@ -103,7 +106,7 @@ public class KnowledgeGraph {
      * @return a set of Triples matching the query pattern, or an empty set if none are found
      */
     public Set<Triple> executeQuery(String subject, String predicate, String object) {
-        String queryKey = subject + " " + predicate + " " + object;
+        String queryKey = subject + " " + predicate + " " + object + ".";
         return queryMapSet.getOrDefault(queryKey, java.util.Collections.emptySet());
     }
 
@@ -115,7 +118,8 @@ public class KnowledgeGraph {
      * @param triple     the Triple to add to the set
      */
     private void addPotentialQueryToSet(String identifier, Triple triple) {
-        Set<Triple> querySet = queryMapSet.putIfAbsent(identifier, new java.util.HashSet<>());
+        queryMapSet.putIfAbsent(identifier, new java.util.HashSet<>());
+        Set<Triple> querySet = queryMapSet.get(identifier);
         querySet.add(triple);
     }
 }
