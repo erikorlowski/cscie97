@@ -22,6 +22,12 @@ public class Importer {
             while ((line = reader.readLine()) != null) {
                 lineNumber++;
 
+                // Strip BOM character
+                // (I don't know why, but this was causing me issues)
+                if (line.length() > 0 && line.charAt(0) == '\uFEFF') {
+                    line = line.substring(1);
+                }
+
                 line = line.trim();
                 if (line.isEmpty()) {
                     continue;

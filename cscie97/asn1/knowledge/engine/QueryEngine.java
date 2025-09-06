@@ -66,6 +66,12 @@ public class QueryEngine {
         try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
             String line;
             while ((line = reader.readLine()) != null) {
+                // Strip BOM character
+                // (I don't know why, but this was causing me issues)
+                if (line.length() > 0 && line.charAt(0) == '\uFEFF') {
+                    line = line.substring(1);
+                }
+
                 executeQuery(line);
             }
         } catch (Exception e) {
