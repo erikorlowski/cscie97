@@ -45,6 +45,10 @@ public class Importer {
                 String predicate = parts[1].trim();
                 String object = parts[2].trim();
 
+                if(subject.equals("?") || predicate.equals("?") || object.equals("?")) {
+                    throw new ImportException("Triples cannot contain '?' at line " + lineNumber + ": " + line);
+                }
+
                 KnowledgeGraph.getInstance().importTriple(subject, predicate, object);
             }
         } catch (IOException e) {

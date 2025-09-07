@@ -1,0 +1,5 @@
+Erik is_a Erik .
+Erik is_a Human.
+Erik is_a human.
+erik Is_a mammal.
+Human is_a Erik.
