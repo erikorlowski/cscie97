@@ -171,14 +171,14 @@ _Rationale:_ These characters are included in the command syntax, so allowing th
 
 ### Script Execution
 __Requirement: Script Validation__
-Before executing a command script, the following elements of the script shall be validated:
+While executing a command script, the following elements of the script shall be validated:
 * The syntax of each command
 * The uniqueness property of each name
 * The existence of each specified object
 
-If any of these validation checks fail, the script shall not execute and an informative error message shall be displayed to the user.
+If any of these validation checks fail, the script shall stop at the current point of execution and display an error indicating where the script stopped running.
 
-_Rationale:_ Users of this product are likely to be non-technical, so it would be frustrating for them to have a script partially run and need to create a new script to only run the parts that failed.
+_Rationale:_ Users of this product will not interact directly with this API and other services are likely to interact with this API through single calls and not long scripts. Therefore the extra effort to ensure a failed script execution does not have any side effects is not neccessary.
 
 __Requirement: Script Confirmation__
 After successfully executing a command script, a message shall be displayed to the user indicating that the script ran successfully.
@@ -191,9 +191,9 @@ The user will call on the Model Service to run a script. That script will then b
 ```plantuml
 @startuml
 actor User
+actor Controller as "Housemate Controller Service"
 rectangle Service as "Housemate Model Service" {
-    usecase RunScript as "Run Command Script"
-    usecase Validate as "Validate Command Script"
+    usecase RunScript as "Run API Services"
     usecase Execute as "Execute Commands"
     usecase Command as "Run Specific Command"
     usecase Define as "Define Component"
@@ -204,7 +204,7 @@ rectangle Service as "Housemate Model Service" {
 
 
 User -- RunScript
-RunScript ..> Validate
+Controller -- RunScript
 RunScript ..> Execute
 Execute ..> Command
 Command <|-- Define
@@ -219,15 +219,11 @@ Models -up- View
 ## Implementation
 At a high level, when a command script is passed in by a user, the processessing of this file starts with the ModelServiceApiDriver class. The ModelServiceApiDriver class is responsible for interacting with the file and passing the text of the file to the ModelServiceApi class.
 
-The ModelServiceApi class is the class responsible for the validation and execution of the command script. This first step is to validate the script.
+The ModelServiceApi class is the class responsible for the validation and execution of the command script.
 
-In validation, the ModelServiceApi uses the CommandFactory to create each command. The CommandFactory is responsible for reading the first part of the command text and deciding what type of command it is. The CommandFactory class then creates a specific concrete Command.
+The ModelServiceApi uses the CommandFactory to create each command. The CommandFactory is responsible for reading the first part of the command text and deciding what type of command it is. The CommandFactory class then creates a specific concrete Command.
 
-The concrete Command class is then responsible for final validation of the command text. Part of this validation includes provisionally creating objects, including Housemate Model Objects and statuses.
-
-The purpose of this provisional creation is to have objects in place so the script can be checked for errors such as identifiers that do not exist.
-
-If validation is successful, the ModelServiceApi will call on each Command to execute.
+The concrete Command class is then responsible for final validation and execution of the command text.
 
 A high level view of the happy path process to execute a Command Script is shown in the sequence diagram below.
 
@@ -245,33 +241,25 @@ participant Command as "Concrete Command"
 participant Obj as "Model Object"
 
 User -> ModelServiceApiDriver : Pass Command Script
-ModelServiceApiDriver -> ModelServiceApi : Run Script
-note left of ModelServiceApi
-    Validate Script
-endnote
 loop For Each Command in Script
-    ModelServiceApi -> CommandFactory : Create Command
-    CommandFactory -> CommandFactory : Classify Command
-    CommandFactory -> Command : <<Create>\nAttempt to Create Command
-    Command -> Obj : <<Create>\nProvisionally Create Object(s)
-end
-note left of ModelServiceApi
-    Execute Script
-endnote
-loop For Each Command in Script
-    ModelServiceApi -> Command : Execute Command
+    ModelServiceApiDriver -> ModelServiceApi : Create Command
+    ModelServiceApi -> ModelServiceApi : Classify Command
+    ModelServiceApi -> Command : <<Create>>\nAttempt to Create Command
+    Command -> KnowledgeGraph : Update KnowledgeGraph
+    Command -> Obj : <<Create>>\nCreate Object(s)
+    Command -> Command : Execute Command
     Command -> Obj : Act on Object(s)
     Command -> ModelServiceApiDriver : Display Message
 end
 @enduml
 ```
 __1:__ The user passes a command script file to the service.
-__2:__ The ModelServiceApiDriver parses the text of the command script file and passes it to the ModelServiceApi.
-__3:__ The ModelServiceApi calls on the CommandFactory, which serves as a single actor to create any type of command.
-__4:__ The CommandFactory attempts to use the first part of the command and classify what type of command (e.g. definition, modification, viewing) to create.
-__5:__ Depending on the classification, the CommandFactory creates a specific type of command. This class then uses the remainder of the command text to validate the rest of the command.
-__6:__ If objects are created in the script, we must create them now so that we can validate later in the script that we are able to find all of our identifiers. If the script validation fails at a later point, these objects will be deleted.
-__7:__ Run the specific logic for each command to execute it. This step also removes the provisional marking on created objects because the script has already been validated.
+__2:__ The ModelServiceApiDriver parses the text of the command script file and passes it line by line to the ModelServiceApi.
+__3:__ The ModelServiceApi attempts to use the first part of the command and classify what type of command (e.g. definition, modification, viewing) to create.
+__4:__ Depending on the classification, the ModelServiceApi creates a specific type of command. This class then uses the remainder of the command text to validate the rest of the command.
+__5:__ Update the KnowledgeGraph with the new objects created.
+__6:__ Create the objects required for this command.
+__7:__ Run the specific logic for the command to execute it. 
 __8:__ The command uses or modifies the Model Objects as required.
 __9:__ Any messages that must be displayed to the user are delegated to the ModelServiceApiDriver class.
 
@@ -288,23 +276,12 @@ class ModelServiceApiDriver << (S,#FF7700) Singleton >> {
 }
 
 class ModelServiceApi << (S,#FF7700) Singleton >> {
-    - commandList : ArrayList<Command>
-    - houseMap : Map<House>
-    - occupantMap : Map<Occupant>
-    + validateScript(in commandScriptFile: File, in authKey: long) : void
-    + executeScript() : void
-    + cleanup() : void
-}
-
-class CommandFactory << (S,#FF7700) Singleton >> {
-    + createCommand(in scriptLineText: String) : Command
+    - knowledgeGraph : KnowledgeGraph
+    + executeCommand(in commandText: String) : void
 }
 
 interface Command {
     + Command(in scriptLineText: String)
-    + execute() : void
-    + destroy() : void
-    + isProvisional() : boolean
 }
 
 class Define {
@@ -334,16 +311,13 @@ class ShowDevice {
 }
 
 interface ModelObject {
-    + destroy() : void
-    + isProvisional(): boolean
-    + setAsNonProvisional() : void
+    + getName()
+    + getFullyQualifiedName()
 }
 
 class House {
     - name : String
     - address : String
-    - occupants : Map<Occupant>
-    - rooms : Map<Room>
     + addOccupant(in occupant : Occupant) : void
     - getDevices() : Map<Device>
     - deleteDefaultRoom() : void
@@ -355,8 +329,6 @@ class Room {
     - floor : String
     - numWindows : int
     - isDefaultRoom : boolean
-    - devices : Map<Device>
-    - appliances : Map<Appliance>
 }
 
 class Occupant {
@@ -397,7 +369,6 @@ enum OccupantStatus {
 class Status {
     - name : String
     - value : String
-    - isProvisional : boolean
 }
 
 interface EnergyReadable {
@@ -408,12 +379,16 @@ interface Configurable {
     + getConfiguration() : String
 }
 
+class KnowledgeGraph {
+    + importTriple(in subject : String, in predicate String, in object String) : void
+    + executeQuery(in subject : String, in predicate String, in object String) : Set<Triple>
+    + deleteTriple(in subject : String, in predicate String, in object String) : void
+}
+
 ModelServiceApiDriver ..> ModelServiceApi
-ModelServiceApi o-- "*" House
-ModelServiceApi o-- "*" Occupant
-ModelServiceApi ..> CommandFactory
-ModelServiceApi *-- "*" Command
-CommandFactory ..> Command
+ModelServiceApi "1" *-- "1" KnowledgeGraph
+ModelServiceApi ..> Command
+Command ..> KnowledgeGraph
 Occupant ..> OccupantType
 Occupant ..> OccupantStatus
 Define o-- ModelObject
@@ -452,9 +427,7 @@ Room *-- "*" Device
 
 The top level class that users will interact with it the ModelServiceApiDriver. This class reads the script file and displays messages to users. The class delegates the validation and execution of the script file to the ModelServiceApi class.
 
-The ModelServiceApi class is the main class responsible for validating and executing the script. It utilizes the CommandFactory class in validation to create the necessary Commands.
-
-The CommandFactory is responsible for creating categorizing and creating Commands.
+The ModelServiceApi class is the main class responsible for validating and executing the script. It creates and categorizes Commands.
 
 Commands are responsible for performing the business logic of a line in the script file. Concrete Command classes are created for different types of Commands.
 
@@ -474,43 +447,37 @@ __Methods:__
 | displayMessage | void displayMessage(String message) | Print the given message to the screen. |
 
 ### ModelServiceApi
-The ModelServiceApi is responsible for the validation and execution of a Command script. It uses the CommandFactory class to create Commands during validation, maintains a list of these Commands, and interacts with these Commands directly to execute them.
+The ModelServiceApi is responsible for the validation and execution of a Command script. It classifies and creates Commands to handle the business logic of the API request.
 
 This class is a Singleton instance and follows the [Singleton Design Pattern](https://www.geeksforgeeks.org/system-design/singleton-design-pattern/).
 
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| validateScript | void validateScript(File commandScriptFile, long authKey) | Validate the command script file before executing. This validation includes provisionally creating the Commands. An authentication key is included for future use. |
-| executeScript | void executeScript() | Calls on each Command created during the validation process to execute. |
-| cleanup | void cleanup() | Called on a validation failure to remove provisionally created Commands and ModelObjects. |
+| executeCommand | void executeScript(String commandText) | Calls on each Command created during the validation process to execute. |
 
 __Associations:__
 | Association Name | Type | Description |
 |---|---|---|
-| commandList | ArrayList<Command> | Maintains a list of all Commands in the current Command script. |
-| houseMap | Map<House> | Maintains a Key-Value pair Map of all created Houses. |
-| occupantMap | Map<Occupant> | Maintains a Key-Value pair Map of all created Occupants. |
+| knowledgeGraph | KnowledgeGraph | Maintains the ModelObjects and their associations. |
 
-### CommandFactory
-The CommandFactory class is the single point of entry to create new Commands. This class is responsible for parsing the first part of a script line, classifying the type of Command, and creating an instance of that Command.
-
-This class is a Singleton instance and follows the [Singleton Design Pattern](https://www.geeksforgeeks.org/system-design/singleton-design-pattern/).
+### KnowledgeGraph
+The KnowledgeGraph from assignment 1 is used to maintain the ModelObjects and their associations with each other. ModelObjects passed to the KnowledgeGraph are specified by their fully qualified name. The predicate used for ownership is "has_a".
 
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| createCommand | Command createCommand(String sciptLineText) | Creates and returns a new Command by classifying the text in a line of the script file. If the CommandType cannot be classified, an exception is thrown. |
+| importTriple | void importTriple(String subject, String predicate, String object) | Adds a new Triple to the KnowledgeGraph. |
+| executeQuery | void executeQuery(String subject, String predicate, String object) | Adds a new Triple to the KnowledgeGraph. |
+| deleteTriple | void deleteTriple(String subject, String predicate, String object) | Deletes the specified Triple if it exists. |
 
 ### Command
-The Command interface encompasses the functionality to create, execute and destroy Commands.
+The Command interface encompasses the functionality to create nad execute Commands.
 
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
 | Command | Command(String scriptLineText) | Provisionally creates a new Command from a line of the script and creates the relevant ModelObjects. If an error occurs in creating the Command, throw an exception. |
-| execute | void execute() | Performs the business logic to run the command and mark the Command and associates objects as no longer provisional. |
-| destroy | void destroy() | Deletes an objects that were provisionally created when the Command was being validates. |
 
 ### SetValue
 The SetValue class is an implementation of the Command interface used to handle Commands involving setting the value of a Device.
@@ -559,7 +526,8 @@ The ModelObject interface represents a component in the Housemates system that C
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| destroy | destroy() | Destroys a provisionally created object and anything associated with it upon a validation failure. |
+| getName | String getName() | Gets the name of this ModelObject. |
+| getFullyQualifiedName | String getFullyQualifiedName() | Gets the name of the ModelObject preceded by its owning objects, separated by colons (e.g. "House1:Room2:Thermostat").
 
 ### Configurable
 The Configurable interface is used for the ShowConfiguration Command to interact with certain ModelObjects to display their configuration.
@@ -593,12 +561,6 @@ __Properties:__
 | name | String | The globally unique name of the House. |
 | address | String | The address of the house. |
 
-__Associations:__
-| Association Name | Type | Description |
-|---|---|---|
-| occupants | Map<Occupant> | A Map of Occupants associated with the House. |
-| rooms | Map<Room> | A Map of Rooms associated with the House. |
-
 ### Room
 Represents a room in the Housemates system.
 
@@ -610,12 +572,6 @@ __Properties:__
 | floor | String | The floor of the Room. This is a String to have the ability to represent floors such as "Ground Floor", "Basement". |
 | numWindows | int | The number of windows in the Room. |
 | isDefaultRoom | boolean | Is this Room the default Room created when a new House is defined? |
-
-__Associations:__
-| Association Name | Type | Description |
-|---|---|---|
-| devices | Map<Device> | A Map of the Devices in the Room. |
-| appliances | Map<Appliance> | A Map of the Appliances in the Room, used to efficiently get the current energy consumption of the Room. |
 
 ### Occupant
 Represents an Occupant in the Housemate system.
@@ -696,9 +652,11 @@ In all cases, these exceptions result in the script not executing and an error m
 
 First, any exceptions related to opening or reading from the command script file are handled by the ModelServiceApiDriver class.
 
-Next, any issues with the formatting of a command such that the command type cannot be ascertained are handled by the CommandFactory class.
+Next, any issues with the formatting of a command such that the command type cannot be ascertained are handled by the ModelServiceApi class.
 
 Any issues dealing with the syntax of a classified command, or with finding an identifier are handled by the concrete Command class.
+
+In all cases, these exceptions cause the execution of the command and the script to stop. The effects from any previously executed commands are not undone.
 
 ## Testing
 ### Sample Script Test
@@ -711,7 +669,7 @@ For every class that has duplicate name requirements, an attempt will be made to
 This test shall pass script files with undefined commands, disallowed characters in names and an incorrect number of whitespace separated words and verify that these validation failures are correctly handled.
 
 ### Script Partially Ran Test
-This test shall run a script to create and modify objects, with a command at the end of the script that will fail. It shall be verified that the script leaves no side effects to the Housemate Model.
+This test shall run a script to create and modify objects, with a command at the end of the script that will fail. It shall be verified that the script preserves the effects to the Housemate Model of the successfully executed Commands.
 
 ## Risks
 The primary risk of this design is in classifying types of commands. The design as it stands requires many class definitions that might not scale well with a large number of commands, such as opening up the system to third party commands. In addition to this, the process of classifying a command will take place in O(n) time, with n representing the number of commands. If the number of command types were to grow significantly, this would create performance issues.
