@@ -11,6 +11,25 @@ import java.util.regex.Pattern;
  */
 public class CommandParser {
     private String scriptLineText;
+    private int lineNumber;
+
+    private static CommandParser instance = null;
+
+    private CommandParser() {
+        // Private constructor to prevent instantiation
+    }
+
+    /**
+     * Get the singleton instance of the CommandParser.
+     *
+     * @return the singleton CommandParser instance
+     */
+    public static CommandParser getInstance() {
+        if (instance == null) {
+            instance = new CommandParser();
+        }
+        return instance;
+    }
 
     /**
      * Construct a parser for a single script line and execute the matching command.
@@ -18,7 +37,9 @@ public class CommandParser {
      * @param scriptLineText the raw text of a single script line; may contain leading/trailing whitespace
      * @throws IllegalArgumentException if the script line is null, unrecognized, or invalid for a matched command
      */
-    public CommandParser(String scriptLineText) {
+    void executeCommand(String scriptLineText, int lineNumber) {
+        this.lineNumber = lineNumber;
+
         if (scriptLineText != null && !scriptLineText.isEmpty() &&scriptLineText.charAt(0) == '\uFEFF') {
             // Remove BOM if present
             scriptLineText = scriptLineText.substring(1);
@@ -92,9 +113,9 @@ public class CommandParser {
                 return;
             }
 
-            throw new IllegalArgumentException("Unrecognized command: " + scriptLineText);
+            throw new IllegalArgumentException("Unrecognized command: " + scriptLineText + " at line " + lineNumber);
         } else {
-            throw new IllegalArgumentException("Command cannot be null");
+            throw new IllegalArgumentException("Command cannot be null" + " at line " + lineNumber);
         }
     }
 
@@ -120,7 +141,7 @@ public class CommandParser {
             defineAppliance(remainingText);
         } else {
             // Unrecognized define command
-            throw new IllegalArgumentException("Unrecognized define command: " + this.scriptLineText);
+            throw new IllegalArgumentException("Unrecognized define command: " + this.scriptLineText + " at line " + lineNumber);
         }
     }
 
@@ -146,7 +167,7 @@ public class CommandParser {
 
             ModelServiceApi.getInstance().addModelObject(newHouse);
         } else {
-            throw new IllegalArgumentException("Invalid house definition: " + this.scriptLineText);
+            throw new IllegalArgumentException("Invalid house definition: " + this.scriptLineText + " at line " + lineNumber);
         }
     }
 
@@ -173,20 +194,20 @@ public class CommandParser {
             house = (House) ModelServiceApi.getInstance().getModelObject("house_" + m.group(4).trim());
 
             if (house == null) {
-                throw new IllegalArgumentException("House not found for room definition: " + this.scriptLineText);
+                throw new IllegalArgumentException("House not found for room definition: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             try {
                 windows = Integer.parseInt(m.group(5).trim());
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid windows number: " + scriptLineText);
+                throw new IllegalArgumentException("Invalid windows number: " + scriptLineText + " at line " + lineNumber);
             }
 
             Room newRoom = new Room(house.getFullyQualifiedName() + ":room_" + name, type, floor, windows);
             ModelServiceApi.getInstance().addModelObject(newRoom);
             ModelServiceApi.getInstance().addOwnership(house, newRoom);
         } else {
-            throw new IllegalArgumentException("Invalid room definition: " + this.scriptLineText);
+            throw new IllegalArgumentException("Invalid room definition: " + this.scriptLineText + " at line " + lineNumber);
         }
     }
 
@@ -211,14 +232,14 @@ public class CommandParser {
             try {
                 occupantType = OccupantType.valueOf(type.toUpperCase());
             } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Invalid occupant type: " + scriptLineText);
+                throw new IllegalArgumentException("Invalid occupant type: " + scriptLineText + " at line " + lineNumber);
             }
 
             Occupant newOccupant = new Occupant("occupant_" + name, occupantType);
 
             ModelServiceApi.getInstance().addModelObject(newOccupant);
         } else {
-            throw new IllegalArgumentException("Invalid occupant definition: " + this.scriptLineText);
+            throw new IllegalArgumentException("Invalid occupant definition: " + this.scriptLineText + " at line " + lineNumber);
         }
     }
 
@@ -243,20 +264,20 @@ public class CommandParser {
             house = (House) ModelServiceApi.getInstance().getModelObject("house_" + m.group(3).trim());
 
             if (house == null) {
-                throw new IllegalArgumentException("House not found for sensor definition: " + this.scriptLineText);
+                throw new IllegalArgumentException("House not found for sensor definition: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             room = (Room) ModelServiceApi.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + m.group(4).trim());
 
             if (room == null) {
-                throw new IllegalArgumentException("Room not found for sensor definition: " + this.scriptLineText);
+                throw new IllegalArgumentException("Room not found for sensor definition: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             Sensor newSensor = new Sensor(room.getFullyQualifiedName() + ":sensor_" + name, type);
             ModelServiceApi.getInstance().addModelObject(newSensor);
             ModelServiceApi.getInstance().addOwnership(room, newSensor);
         } else {
-            throw new IllegalArgumentException("Invalid sensor definition: " + this.scriptLineText);
+            throw new IllegalArgumentException("Invalid sensor definition: " + this.scriptLineText + " at line " + lineNumber);
         }
     }
 
@@ -282,19 +303,19 @@ public class CommandParser {
             house = (House) ModelServiceApi.getInstance().getModelObject("house_" + m.group(3).trim());
 
             if (house == null) {
-                throw new IllegalArgumentException("House not found for sensor definition: " + this.scriptLineText);
+                throw new IllegalArgumentException("House not found for appliance definition: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             room = (Room) ModelServiceApi.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + m.group(4).trim());
 
             if (room == null) {
-                throw new IllegalArgumentException("Room not found for sensor definition: " + this.scriptLineText);
+                throw new IllegalArgumentException("Room not found for appliance definition: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             try {
                 energyUseWhenOnWatts = Double.parseDouble(m.group(5).trim());
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid energy-use number: " + scriptLineText);
+                throw new IllegalArgumentException("Invalid energy-use number: " + scriptLineText + " at line " + lineNumber);
             }
 
             Appliance newAppliance = new Appliance(room.getFullyQualifiedName() + ":appliance_" + name, type, energyUseWhenOnWatts);
@@ -311,13 +332,13 @@ public class CommandParser {
                 room = (Room) ModelServiceApi.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + m.group(4).trim());
 
                 if (room == null) {
-                    throw new IllegalArgumentException("Room not found for appliance definition: " + this.scriptLineText);
+                    throw new IllegalArgumentException("Room not found for appliance definition: " + this.scriptLineText + " at line " + lineNumber);
                 }
 
                 Appliance newAppliance = new Appliance(room.getFullyQualifiedName() + ":appliance_" + name, type, 0.0);
                 ModelServiceApi.getInstance().addModelObject(newAppliance);
             } else {
-                throw new IllegalArgumentException("Invalid appliance definition: " + this.scriptLineText);
+                throw new IllegalArgumentException("Invalid appliance definition: " + this.scriptLineText + " at line " + lineNumber);
             }
         }
     }
@@ -340,17 +361,17 @@ public class CommandParser {
 
             Occupant occupant = (Occupant) ModelServiceApi.getInstance().getModelObject("occupant_" + occupantName);
             if (occupant == null) {
-                throw new IllegalArgumentException("Occupant not found: " + this.scriptLineText);
+                throw new IllegalArgumentException("Occupant not found: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             House house = (House) ModelServiceApi.getInstance().getModelObject("house_" + houseName);
             if (house == null) {
-                throw new IllegalArgumentException("House not found: " + this.scriptLineText);
+                throw new IllegalArgumentException("House not found: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             ModelServiceApi.getInstance().addOwnership(house, occupant);
         } else {
-            throw new IllegalArgumentException("Invalid add occupant command: " + this.scriptLineText);
+            throw new IllegalArgumentException("Invalid add occupant command: " + this.scriptLineText + " at line " + lineNumber);
         }
     }
 
@@ -379,12 +400,12 @@ public class CommandParser {
 
             House house = (House) ModelServiceApi.getInstance().getModelObject("house_" + houseName);
             if (house == null) {
-                throw new IllegalArgumentException("House not found for set command: " + this.scriptLineText);
+                throw new IllegalArgumentException("House not found for set command: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             Room room = (Room) ModelServiceApi.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + roomName);
             if (room == null) {
-                throw new IllegalArgumentException("Room not found for set command: " + this.scriptLineText);
+                throw new IllegalArgumentException("Room not found for set command: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             device = null;
@@ -394,7 +415,7 @@ public class CommandParser {
             }
 
             if (device == null) {
-                throw new IllegalArgumentException("Device not found for set command: " + this.scriptLineText);
+                throw new IllegalArgumentException("Device not found for set command: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             device.setStatus(status, value);
@@ -410,12 +431,12 @@ public class CommandParser {
 
                 House house = (House) ModelServiceApi.getInstance().getModelObject("house_" + houseName);
                 if (house == null) {
-                    throw new IllegalArgumentException("House not found for set command: " + this.scriptLineText);
+                    throw new IllegalArgumentException("House not found for set command: " + this.scriptLineText + " at line " + lineNumber);
                 }
 
                 Room room = (Room) ModelServiceApi.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + roomName);
                 if (room == null) {
-                    throw new IllegalArgumentException("Room not found for set command: " + this.scriptLineText);
+                    throw new IllegalArgumentException("Room not found for set command: " + this.scriptLineText + " at line " + lineNumber);
                 }
 
                 device = null;
@@ -425,13 +446,13 @@ public class CommandParser {
                 }
 
                 if (device == null) {
-                    throw new IllegalArgumentException("Device not found for set command: " + this.scriptLineText);
+                    throw new IllegalArgumentException("Device not found for set command: " + this.scriptLineText + " at line " + lineNumber);
                 }
 
                 device.setStatus(status, "active");
             } else {
 
-                throw new IllegalArgumentException("Invalid set command: " + this.scriptLineText);
+                throw new IllegalArgumentException("Invalid set command: " + this.scriptLineText + " at line " + lineNumber);
             }
         }
     }
@@ -468,10 +489,10 @@ public class CommandParser {
                         obj = (Configurable) ModelServiceApi.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":appliance_" + objects[2]);
                     }
                 } else {
-                    throw new IllegalArgumentException("Invalid object name for show configuration command: " + this.scriptLineText);
+                    throw new IllegalArgumentException("Invalid object name for show configuration command: " + this.scriptLineText + " at line " + lineNumber);
                 }
             } catch (ClassCastException e) {
-                throw new IllegalArgumentException("Object is not configurable for show configuration command: " + this.scriptLineText);
+                throw new IllegalArgumentException("Object is not configurable for show configuration command: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             System.out.println(obj.getConfiguration());
@@ -483,7 +504,7 @@ public class CommandParser {
                 }
             }
         } else {
-            throw new IllegalArgumentException("Invalid show configuration command: " + this.scriptLineText);
+            throw new IllegalArgumentException("Invalid show configuration command: " + this.scriptLineText + " at line " + lineNumber);
         }
     }
 
@@ -515,10 +536,10 @@ public class CommandParser {
                     // It's an appliance
                     obj = (EnergyReadable) ModelServiceApi.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":appliance_" + objects[2]);
                 } else {
-                    throw new IllegalArgumentException("Invalid object name for show energy-use command: " + this.scriptLineText);
+                    throw new IllegalArgumentException("Invalid object name for show energy-use command: " + this.scriptLineText + " at line " + lineNumber);
                 }
             } catch (ClassCastException e) {
-                throw new IllegalArgumentException("Object is not energy-readable for show energy-use command: " + this.scriptLineText);
+                throw new IllegalArgumentException("Object is not energy-readable for show energy-use command: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             System.out.println(((ModelObject) obj).getName() + " energy use: " + obj.getEnergyConsumptionWatts());
@@ -532,7 +553,7 @@ public class CommandParser {
             }
             System.out.println("Total energy use for all houses: " + totalEnergyUse);
         } else {
-            throw new IllegalArgumentException("Invalid show energy-use command: " + this.scriptLineText);
+            throw new IllegalArgumentException("Invalid show energy-use command: " + this.scriptLineText + " at line " + lineNumber);
         }
     }
 
@@ -564,20 +585,20 @@ public class CommandParser {
                     }
 
                     if(obj == null) {
-                        throw new IllegalArgumentException("Device not found for show device command: " + this.scriptLineText);
+                        throw new IllegalArgumentException("Device not found for show device command: " + this.scriptLineText + " at line " + lineNumber);
                     }
                 } else {
-                    throw new IllegalArgumentException("Invalid object name for show device command: " + this.scriptLineText);
+                    throw new IllegalArgumentException("Invalid object name for show device command: " + this.scriptLineText + " at line " + lineNumber);
                 }
             } catch (ClassCastException e) {
-                throw new IllegalArgumentException("Object is not a device for show device command: " + this.scriptLineText);
+                throw new IllegalArgumentException("Object is not a device for show device command: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             String statusValue = obj.getStatus(statusName);
             if(statusValue != null) {
                 System.out.println(obj.getName() + " status " + statusName + ": " + statusValue);
             } else {
-                throw new IllegalArgumentException("Status " + statusName + " not found for device " + obj.getName() + " in command: " + this.scriptLineText);
+                throw new IllegalArgumentException("Status " + statusName + " not found for device " + obj.getName() + " in command: " + this.scriptLineText + " at line " + lineNumber);
             }
         } else {
             p = Pattern.compile("^\\s*\\b(.*)$", Pattern.CASE_INSENSITIVE);
@@ -594,15 +615,15 @@ public class CommandParser {
                     }
 
                     if(obj == null) {
-                        throw new IllegalArgumentException("Device not found for show device command: " + this.scriptLineText);
+                        throw new IllegalArgumentException("Device not found for show device command: " + this.scriptLineText + " at line " + lineNumber);
                     }
                 } else {
-                    throw new IllegalArgumentException("Invalid object name for show device command: " + this.scriptLineText);
+                    throw new IllegalArgumentException("Invalid object name for show device command: " + this.scriptLineText + " at line " + lineNumber);
                 }
 
                 System.out.println(obj.getName() + " statuses: " + obj.getStatuses());
             } else {
-                throw new IllegalArgumentException("Invalid show device command: " + this.scriptLineText);
+                throw new IllegalArgumentException("Invalid show device command: " + this.scriptLineText + " at line " + lineNumber);
             }
         }
     }

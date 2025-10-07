@@ -87,8 +87,10 @@ public class ModelServiceApi {
     public void executeScript(String filename) {
         try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
             String line;
+            int lineNumber = 1;
             while ((line = br.readLine()) != null) {
-                new CommandParser(line);
+                CommandParser.getInstance().executeCommand(line, lineNumber);
+                lineNumber++;
             }
         } catch (IOException e) {
             throw new IllegalArgumentException("Failed to execute script: " + filename, e);
