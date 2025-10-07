@@ -5,7 +5,7 @@ package cscie97.asn2.housemate.model;
  * that carries a type, status, and known/unknown flag. The fully qualified name
  * is used as the registry key and the simple name is derived from it.
  */
-public class Occupant implements ModelObject {
+class Occupant implements ModelObject {
     private String name;
     private OccupantType type;
     private OccupantStatus status;

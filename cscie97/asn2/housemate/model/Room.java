@@ -7,7 +7,7 @@ import java.util.Set;
  * configurable and exposes its energy consumption via EnergyReadable.
  * Rooms may own devices (appliances) and delegate energy calculations to them.
  */
-public class Room implements ModelObject, EnergyReadable, Configurable {
+class Room implements ModelObject, EnergyReadable, Configurable {
     private String name;
     private String fullyQualifiedName;
     private String type;
@@ -50,12 +50,12 @@ public class Room implements ModelObject, EnergyReadable, Configurable {
      */
     @Override
     public double getEnergyConsumptionWatts() {
-        Set<String> devices = ModelServiceApi.getInstance().getOwnedObjects(this);
+        Set<String> devices = ModelServiceApiImpl.getInstance().getOwnedObjects(this);
 
         double energyConsumptionWatts = 0.0;
 
         for (String deviceName : devices) {
-            ModelObject obj = ModelServiceApi.getInstance().getModelObject(deviceName);
+            ModelObject obj = ModelServiceApiImpl.getInstance().getModelObject(deviceName);
             if (obj instanceof Appliance) {
                 energyConsumptionWatts += ((Appliance) obj).getEnergyConsumptionWatts();
             }

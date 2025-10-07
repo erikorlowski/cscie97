@@ -5,7 +5,7 @@ package cscie97.asn2.housemate.model;
  * configurable and exposes its energy consumption via EnergyReadable.
  * It aggregates rooms and delegates energy calculations to them.
  */
-public class House implements ModelObject, Configurable, EnergyReadable {
+class House implements ModelObject, Configurable, EnergyReadable {
     private String name;
     private String fullyQualifiedName;
     private String address;
@@ -42,8 +42,8 @@ public class House implements ModelObject, Configurable, EnergyReadable {
     public double getEnergyConsumptionWatts() {
         double energyConsumptionWatts = 0.0;
 
-        for (String roomName : ModelServiceApi.getInstance().getOwnedObjects(this)) {
-            ModelObject obj = ModelServiceApi.getInstance().getModelObject(roomName);
+        for (String roomName : ModelServiceApiImpl.getInstance().getOwnedObjects(this)) {
+            ModelObject obj = ModelServiceApiImpl.getInstance().getModelObject(roomName);
             if (obj instanceof Room) {
                 energyConsumptionWatts += ((Room) obj).getEnergyConsumptionWatts();
             }

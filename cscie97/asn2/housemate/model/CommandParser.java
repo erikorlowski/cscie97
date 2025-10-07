@@ -7,9 +7,9 @@ import java.util.regex.Pattern;
  * Parses a single line of the housemate script and dispatches to the appropriate
  * handler for commands such as "define", "add occupant", "set", and "show".
  * The parser performs simple pattern matching and delegates creation/modification
- * operations to the ModelServiceApi.
+ * operations to the ModelServiceApiImpl.
  */
-public class CommandParser {
+class CommandParser {
     private String scriptLineText;
     private int lineNumber;
 
@@ -165,7 +165,7 @@ public class CommandParser {
 
             House newHouse = new House("house_" + name, address);
 
-            ModelServiceApi.getInstance().addModelObject(newHouse);
+            ModelServiceApiImpl.getInstance().addModelObject(newHouse);
         } else {
             throw new IllegalArgumentException("Invalid house definition: " + this.scriptLineText + " at line " + lineNumber);
         }
@@ -191,7 +191,7 @@ public class CommandParser {
             name = m.group(1).trim();
             floor = m.group(2).trim();
             type = m.group(3).trim();
-            house = (House) ModelServiceApi.getInstance().getModelObject("house_" + m.group(4).trim());
+            house = (House) ModelServiceApiImpl.getInstance().getModelObject("house_" + m.group(4).trim());
 
             if (house == null) {
                 throw new IllegalArgumentException("House not found for room definition: " + this.scriptLineText + " at line " + lineNumber);
@@ -204,8 +204,8 @@ public class CommandParser {
             }
 
             Room newRoom = new Room(house.getFullyQualifiedName() + ":room_" + name, type, floor, windows);
-            ModelServiceApi.getInstance().addModelObject(newRoom);
-            ModelServiceApi.getInstance().addOwnership(house, newRoom);
+            ModelServiceApiImpl.getInstance().addModelObject(newRoom);
+            ModelServiceApiImpl.getInstance().addOwnership(house, newRoom);
         } else {
             throw new IllegalArgumentException("Invalid room definition: " + this.scriptLineText + " at line " + lineNumber);
         }
@@ -237,7 +237,7 @@ public class CommandParser {
 
             Occupant newOccupant = new Occupant("occupant_" + name, occupantType);
 
-            ModelServiceApi.getInstance().addModelObject(newOccupant);
+            ModelServiceApiImpl.getInstance().addModelObject(newOccupant);
         } else {
             throw new IllegalArgumentException("Invalid occupant definition: " + this.scriptLineText + " at line " + lineNumber);
         }
@@ -261,21 +261,21 @@ public class CommandParser {
         if (m.find()) {
             name = m.group(1).trim();
             type = m.group(2).trim();
-            house = (House) ModelServiceApi.getInstance().getModelObject("house_" + m.group(3).trim());
+            house = (House) ModelServiceApiImpl.getInstance().getModelObject("house_" + m.group(3).trim());
 
             if (house == null) {
                 throw new IllegalArgumentException("House not found for sensor definition: " + this.scriptLineText + " at line " + lineNumber);
             }
 
-            room = (Room) ModelServiceApi.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + m.group(4).trim());
+            room = (Room) ModelServiceApiImpl.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + m.group(4).trim());
 
             if (room == null) {
                 throw new IllegalArgumentException("Room not found for sensor definition: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             Sensor newSensor = new Sensor(room.getFullyQualifiedName() + ":sensor_" + name, type);
-            ModelServiceApi.getInstance().addModelObject(newSensor);
-            ModelServiceApi.getInstance().addOwnership(room, newSensor);
+            ModelServiceApiImpl.getInstance().addModelObject(newSensor);
+            ModelServiceApiImpl.getInstance().addOwnership(room, newSensor);
         } else {
             throw new IllegalArgumentException("Invalid sensor definition: " + this.scriptLineText + " at line " + lineNumber);
         }
@@ -300,13 +300,13 @@ public class CommandParser {
         if (m.find()) {
             name = m.group(1).trim();
             type = m.group(2).trim();
-            house = (House) ModelServiceApi.getInstance().getModelObject("house_" + m.group(3).trim());
+            house = (House) ModelServiceApiImpl.getInstance().getModelObject("house_" + m.group(3).trim());
 
             if (house == null) {
                 throw new IllegalArgumentException("House not found for appliance definition: " + this.scriptLineText + " at line " + lineNumber);
             }
 
-            room = (Room) ModelServiceApi.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + m.group(4).trim());
+            room = (Room) ModelServiceApiImpl.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + m.group(4).trim());
 
             if (room == null) {
                 throw new IllegalArgumentException("Room not found for appliance definition: " + this.scriptLineText + " at line " + lineNumber);
@@ -319,8 +319,8 @@ public class CommandParser {
             }
 
             Appliance newAppliance = new Appliance(room.getFullyQualifiedName() + ":appliance_" + name, type, energyUseWhenOnWatts);
-            ModelServiceApi.getInstance().addModelObject(newAppliance);
-            ModelServiceApi.getInstance().addOwnership(room, newAppliance);
+            ModelServiceApiImpl.getInstance().addModelObject(newAppliance);
+            ModelServiceApiImpl.getInstance().addOwnership(room, newAppliance);
         } else {
             p = Pattern.compile("^appliance\\s*\\b(.*)\\s*type\\s*\\b(.*)\\s*room\\s*\\b(.*):(.*)$", Pattern.CASE_INSENSITIVE);
             m = p.matcher(remainingText);
@@ -328,15 +328,15 @@ public class CommandParser {
             if (m.find()) {
                 name = m.group(1).trim();
                 type = m.group(2).trim();
-                house = (House) ModelServiceApi.getInstance().getModelObject("house_" + m.group(3).trim());
-                room = (Room) ModelServiceApi.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + m.group(4).trim());
+                house = (House) ModelServiceApiImpl.getInstance().getModelObject("house_" + m.group(3).trim());
+                room = (Room) ModelServiceApiImpl.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + m.group(4).trim());
 
                 if (room == null) {
                     throw new IllegalArgumentException("Room not found for appliance definition: " + this.scriptLineText + " at line " + lineNumber);
                 }
 
                 Appliance newAppliance = new Appliance(room.getFullyQualifiedName() + ":appliance_" + name, type, 0.0);
-                ModelServiceApi.getInstance().addModelObject(newAppliance);
+                ModelServiceApiImpl.getInstance().addModelObject(newAppliance);
             } else {
                 throw new IllegalArgumentException("Invalid appliance definition: " + this.scriptLineText + " at line " + lineNumber);
             }
@@ -359,17 +359,17 @@ public class CommandParser {
             occupantName = m.group(1).trim();
             houseName = m.group(2).trim();
 
-            Occupant occupant = (Occupant) ModelServiceApi.getInstance().getModelObject("occupant_" + occupantName);
+            Occupant occupant = (Occupant) ModelServiceApiImpl.getInstance().getModelObject("occupant_" + occupantName);
             if (occupant == null) {
                 throw new IllegalArgumentException("Occupant not found: " + this.scriptLineText + " at line " + lineNumber);
             }
 
-            House house = (House) ModelServiceApi.getInstance().getModelObject("house_" + houseName);
+            House house = (House) ModelServiceApiImpl.getInstance().getModelObject("house_" + houseName);
             if (house == null) {
                 throw new IllegalArgumentException("House not found: " + this.scriptLineText + " at line " + lineNumber);
             }
 
-            ModelServiceApi.getInstance().addOwnership(house, occupant);
+            ModelServiceApiImpl.getInstance().addOwnership(house, occupant);
         } else {
             throw new IllegalArgumentException("Invalid add occupant command: " + this.scriptLineText + " at line " + lineNumber);
         }
@@ -398,20 +398,20 @@ public class CommandParser {
             status = m.group(4).trim();
             value = m.group(5).trim();
 
-            House house = (House) ModelServiceApi.getInstance().getModelObject("house_" + houseName);
+            House house = (House) ModelServiceApiImpl.getInstance().getModelObject("house_" + houseName);
             if (house == null) {
                 throw new IllegalArgumentException("House not found for set command: " + this.scriptLineText + " at line " + lineNumber);
             }
 
-            Room room = (Room) ModelServiceApi.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + roomName);
+            Room room = (Room) ModelServiceApiImpl.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + roomName);
             if (room == null) {
                 throw new IllegalArgumentException("Room not found for set command: " + this.scriptLineText + " at line " + lineNumber);
             }
 
             device = null;
-            device = (Device) ModelServiceApi.getInstance().getModelObject(room.getFullyQualifiedName() + ":sensor_" + deviceName);
+            device = (Device) ModelServiceApiImpl.getInstance().getModelObject(room.getFullyQualifiedName() + ":sensor_" + deviceName);
             if(device == null) {
-                device = (Device) ModelServiceApi.getInstance().getModelObject(room.getFullyQualifiedName() + ":appliance_" + deviceName);
+                device = (Device) ModelServiceApiImpl.getInstance().getModelObject(room.getFullyQualifiedName() + ":appliance_" + deviceName);
             }
 
             if (device == null) {
@@ -429,20 +429,20 @@ public class CommandParser {
                 deviceName = m.group(3).trim();
                 status = m.group(4).trim();
 
-                House house = (House) ModelServiceApi.getInstance().getModelObject("house_" + houseName);
+                House house = (House) ModelServiceApiImpl.getInstance().getModelObject("house_" + houseName);
                 if (house == null) {
                     throw new IllegalArgumentException("House not found for set command: " + this.scriptLineText + " at line " + lineNumber);
                 }
 
-                Room room = (Room) ModelServiceApi.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + roomName);
+                Room room = (Room) ModelServiceApiImpl.getInstance().getModelObject(house.getFullyQualifiedName() + ":room_" + roomName);
                 if (room == null) {
                     throw new IllegalArgumentException("Room not found for set command: " + this.scriptLineText + " at line " + lineNumber);
                 }
 
                 device = null;
-                device = (Device) ModelServiceApi.getInstance().getModelObject(room.getFullyQualifiedName() + ":sensor_" + deviceName);
+                device = (Device) ModelServiceApiImpl.getInstance().getModelObject(room.getFullyQualifiedName() + ":sensor_" + deviceName);
                 if(device == null) {
-                    device = (Device) ModelServiceApi.getInstance().getModelObject(room.getFullyQualifiedName() + ":appliance_" + deviceName);
+                    device = (Device) ModelServiceApiImpl.getInstance().getModelObject(room.getFullyQualifiedName() + ":appliance_" + deviceName);
                 }
 
                 if (device == null) {
@@ -477,16 +477,16 @@ public class CommandParser {
             try {
                 if(objects.length == 1) {
                     // It's a house
-                    obj = (Configurable) ModelServiceApi.getInstance().getModelObject("house_" + name);
+                    obj = (Configurable) ModelServiceApiImpl.getInstance().getModelObject("house_" + name);
                 } else if(objects.length == 2) {
                     // It's a room
-                    obj = (Configurable) ModelServiceApi.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1]);
+                    obj = (Configurable) ModelServiceApiImpl.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1]);
                 } else if(objects.length == 3) {
                     // It's a device
-                    obj = (Configurable) ModelServiceApi.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":sensor_" + objects[2]);
+                    obj = (Configurable) ModelServiceApiImpl.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":sensor_" + objects[2]);
 
                     if(obj == null) {
-                        obj = (Configurable) ModelServiceApi.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":appliance_" + objects[2]);
+                        obj = (Configurable) ModelServiceApiImpl.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":appliance_" + objects[2]);
                     }
                 } else {
                     throw new IllegalArgumentException("Invalid object name for show configuration command: " + this.scriptLineText + " at line " + lineNumber);
@@ -498,7 +498,8 @@ public class CommandParser {
             System.out.println(obj.getConfiguration());
         } else if(remainingText.trim().isEmpty()) {
             // Show configuration for all houses
-            for(ModelObject modelObject : ModelServiceApi.getInstance().getAllModelObjects().values()) {
+            System.out.println("Configuration for all houses:");
+            for(ModelObject modelObject : ModelServiceApiImpl.getInstance().getAllModelObjects().values()) {
                 if(modelObject instanceof House) {
                     System.out.println(((House) modelObject).getConfiguration());
                 }
@@ -528,13 +529,13 @@ public class CommandParser {
             try {
                 if(objects.length == 1) {
                     // It's a house
-                    obj = (EnergyReadable) ModelServiceApi.getInstance().getModelObject("house_" + name);
+                    obj = (EnergyReadable) ModelServiceApiImpl.getInstance().getModelObject("house_" + name);
                 } else if(objects.length == 2) {
                     // It's a room
-                    obj = (EnergyReadable) ModelServiceApi.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1]);
+                    obj = (EnergyReadable) ModelServiceApiImpl.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1]);
                 } else if(objects.length == 3) {
                     // It's an appliance
-                    obj = (EnergyReadable) ModelServiceApi.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":appliance_" + objects[2]);
+                    obj = (EnergyReadable) ModelServiceApiImpl.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":appliance_" + objects[2]);
                 } else {
                     throw new IllegalArgumentException("Invalid object name for show energy-use command: " + this.scriptLineText + " at line " + lineNumber);
                 }
@@ -546,7 +547,7 @@ public class CommandParser {
         } else if(remainingText.trim().isEmpty()) {
             // Show energy use for all houses
             double totalEnergyUse = 0.0;
-            for(ModelObject modelObject : ModelServiceApi.getInstance().getAllModelObjects().values()) {
+            for(ModelObject modelObject : ModelServiceApiImpl.getInstance().getAllModelObjects().values()) {
                 if(modelObject instanceof House) {
                     totalEnergyUse += ((House) modelObject).getEnergyConsumptionWatts();
                 }
@@ -578,10 +579,10 @@ public class CommandParser {
             try {
                 if(objects.length == 3) {
                     // It's a device
-                    obj = (Device) ModelServiceApi.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":sensor_" + objects[2]);
+                    obj = (Device) ModelServiceApiImpl.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":sensor_" + objects[2]);
 
                     if(obj == null) {
-                        obj = (Device) ModelServiceApi.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":appliance_" + objects[2]);
+                        obj = (Device) ModelServiceApiImpl.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":appliance_" + objects[2]);
                     }
 
                     if(obj == null) {
@@ -608,10 +609,10 @@ public class CommandParser {
                 String[] objects = name.split(":", 3);
 
                 if(objects.length == 3) {
-                    obj = (Device) ModelServiceApi.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":sensor_" + objects[2]);
+                    obj = (Device) ModelServiceApiImpl.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":sensor_" + objects[2]);
 
                     if(obj == null) {
-                        obj = (Device) ModelServiceApi.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":appliance_" + objects[2]);
+                        obj = (Device) ModelServiceApiImpl.getInstance().getModelObject("house_" + objects[0] + ":room_" + objects[1] + ":appliance_" + objects[2]);
                     }
 
                     if(obj == null) {

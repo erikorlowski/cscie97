@@ -8,7 +8,7 @@ import java.util.TreeMap;
  * Devices have a fully qualified name, a type, and a name.
  * This class should be extended by specific device implementations.
  */
-public abstract class Device implements ModelObject {
+abstract class Device implements ModelObject {
     protected String name;
     protected String fullyQualifiedName;
     protected String type;

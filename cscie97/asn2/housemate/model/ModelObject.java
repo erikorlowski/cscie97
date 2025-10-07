@@ -3,7 +3,7 @@ package cscie97.asn2.housemate.model;
 /**
  * Interface for all model objects in the housemate system.
  */
-public interface ModelObject {
+interface ModelObject {
     /**
      * Get the name of the object.
      *

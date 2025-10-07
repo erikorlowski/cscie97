@@ -22,7 +22,7 @@ A House shall model an individual House. A House shall include the following pie
 * The current energy consumption of the House in Watts
 
 __Requirement: House Name Uniqueness__
-Any attempt to create or modify a House such that two or more Houses would have duplicate names shall be rejected.
+Any attempt to create a House where a House with that name already exists shall have no effect.
 
 __Requirement: Room Model__
 A Room shall model an individual Room. Each Room will be associated with one and only one House. A Room shall contain the following pieces of information:
@@ -35,7 +35,7 @@ A Room shall model an individual Room. Each Room will be associated with one and
 * The Devices in the Room
 
 __Requirement: Room Name Uniqueness__
-Any attempt to create or modify a Room such that two or more Rooms within a House would have duplicate names shall be rejected.
+Any attempt to create a Room where a Room with that name in the House already exists shall have no effect.
 
 __Requirement: Occupant Model__
 An occupant shall model an adult, child or animal. An Occupant shall contain the following pieces of information:
@@ -45,8 +45,7 @@ An occupant shall model an adult, child or animal. An Occupant shall contain the
 * A status (active or sleeping)
 
 __Requirement: Occupant Name Uniqueness__
-Any attempt to create or modify an Occupant such that two or more Occupants would have duplicate names shall be rejected.
-_Rationale:_ A single Occupant could be associated with multiple Houses, so to reliably identify a given occupant, a globally unique name is required.
+Any attempt to create an Occupant where an Occupant with that name already exists shall have no effect.
 
 __Requirement: Device Model__
 A Device is a Sensor or Appliance that can be controlled and/or monitored by the Housemate system. A device shall include the following pieces of information:
@@ -56,8 +55,7 @@ A Device is a Sensor or Appliance that can be controlled and/or monitored by the
 * Device type (e.g. humidity sensor, thermostat, television)
 
 __Requirement: Device Name Uniqueness__
-Any attempt to create or modify a Device such that two or more Devices within a Room would have duplicate names shall be rejected.
-_Rationale:_ All specified CLI commands that interact with a specific Device specify the Room, so a Device name only needs to be unique within a specific Room.
+Any attempt to create a Device where a Device with that name in the Room already exists shall have no effect.
 
 __Requirement: Appliance Control__
 Appliances are a specific type of Device. In addition to the properties and attributes of all Devices, appliances shall have the ability to be controlled to perform one or more actions.
@@ -80,7 +78,7 @@ The Housemate Model Service shall expose a Command Line Interface (CLI) that wil
 __Requirement: Define House Command__
 A CLI command to define a house shall be defined with the following syntax:
 ```define house <house_name> address <address>```
-When executed, this command shall create a new House with the given name and given address. The House will be created with one default Room, which will be deleted when a Room is defined in the House.
+When executed, this command shall create a new House with the given name and given address.
 
 __Requirement: Define Room Command__
 A CLI command to define a Room shall be defined with the following syntax:
@@ -107,10 +105,20 @@ A CLI command to define an Appliance shall be defined with the following syntax:
 ```define appliance <name> type <sensor_type> room <house_name>:<room_name> energy-use <energy-use>```
 When executed, this command shall create a new Appliance with the given name and type. The appliance shall be associated with the specified House and Room. The energy use of the Appliance when turned on shall also be configured as specified.
 
+__Requirement: Define Appliance No Energy Command__
+A CLI command to define an Appliance without specifying the energy consumption shall be defined with the following syntax:
+```define appliance <name> type <sensor_type> room <house_name>:<room_name>```
+When executed, this command shall create a new Appliance with the given name and type. The appliance shall be associated with the specified House and Room. The energy use of the Appliance when turned on shall be zero.
+
 __Requirement: Set Device Value Command__
 A CLI command to set a Device value shall be defined with the following syntax:
 ```set sensor|appliance <house_name>:<room_name>:<name> status <status_name> value <value>```
 When executed, this command shall set the specified Device status to the given value. Status names shall be case insensitive.
+
+__Requirement: Set Device Status Command__
+A CLI command to set a Device status shall be defined with the following syntax:
+```set sensor|appliance <house_name>:<room_name>:<name> status <status_name>```
+When executed, this command shall set the specified Device status to a value of "Actice". Status names shall be case insensitive.
 
 __Requirement: Show Device Status Command__
 A CLI command to set a Device status shall be defined with the following syntax:
@@ -166,14 +174,13 @@ __Requirement: Line Comments__
 Any line where the first non-whitespace character is a "#" shall be considered a comment and not executed.
 
 __Requirement: Disallowed Characters__
-Any identifier or Device value that includes a colon ":" or whitespace shall be rejected.
+Any identifier or Device value that includes a colon ":" shall be rejected.
 _Rationale:_ These characters are included in the command syntax, so allowing these characters would unneccessarily complicate the processing of commands.
 
 ### Script Execution
 __Requirement: Script Validation__
 While executing a command script, the following elements of the script shall be validated:
 * The syntax of each command
-* The uniqueness property of each name
 * The existence of each specified object
 
 If any of these validation checks fail, the script shall stop at the current point of execution and display an error indicating where the script stopped running.
@@ -194,8 +201,6 @@ actor Administrator
 actor Controller as "Housemate Controller Service"
 rectangle Service as "Housemate Model Service" {
     usecase RunScript as "Run API Services"
-    usecase Execute as "Execute Commands"
-    usecase Command as "Run Specific Command"
     usecase Define as "Define Component"
     usecase Set as "Modify Component"
     usecase View as "View Component"
@@ -205,11 +210,9 @@ rectangle Service as "Housemate Model Service" {
 
 Administrator -- RunScript
 Controller -- RunScript
-RunScript ..> Execute
-Execute ..> Command
-Command <|-- Define
-Command <|-- Set
-Command <|-- View
+RunScript <.. Define : <<Extends>>
+RunScript <.. Set  : <<Extends>>
+RunScript <.. View : <<Extends>>
 Models -up- Define
 Models -up- Set
 Models -up- View
@@ -217,11 +220,9 @@ Models -up- View
 ```
 
 ## Implementation
-At a high level, when a command script is passed in by a user, the processessing of this file starts with the ModelServiceApiDriver class. The ModelServiceApiDriver class is responsible for interacting with the file and passing the text of the file to the ModelServiceApi class.
+At a high level, when a command script is passed in by a user, the processessing of this file starts with the ModelServiceApiImpl class. The ModelServiceApiImpl class is responsible for interacting with the file and passing the text of the file line by line to the CommandParser class.
 
-The ModelServiceApi class is the class responsible for the validation and execution of the command script.
-
-The ModelServiceApi uses the the Command class to classify and execute each Command.
+The CommandParser class is the class responsible for the validation and execution of commands.
 
 A high level view of the happy path process to execute a Command Script is shown in the sequence diagram below.
 
@@ -232,33 +233,26 @@ title Script Execution Happy Path
 autonumber
 
 actor User
-participant ModelServiceApiDriver
 participant ModelServiceApi
-participant Command as "Concrete Command"
+participant Command as "CommandParser"
 participant Obj as "Model Object"
 
-User -> ModelServiceApiDriver : Pass Command Script
+User -> ModelServiceApi : Pass Command Script
 loop For Each Command in Script
-    ModelServiceApiDriver -> ModelServiceApi : Create Command
-    ModelServiceApi -> ModelServiceApi : Classify Command
-    ModelServiceApi -> Command : <<Create>>\nAttempt to Create Command
-    Command -> KnowledgeGraph : Update KnowledgeGraph
-    Command -> Obj : <<Create>>\nCreate Object(s)
-    Command -> Command : Execute Command
-    Command -> Obj : Act on Object(s)
-    Command -> ModelServiceApiDriver : Display Message
+    ModelServiceApi -> Command : <<Create>>\nAttempt to Execute Command
+    activate Command
+    Command -> ModelServiceApi : Update Model Registries
+    ModelServiceApi -> KnowledgeGraph : Update KnowledgeGraph
+    Command -> Obj : Act on/Create Object(s)
+    deactivate Command
 end
 @enduml
 ```
 __1:__ The user passes a command script file to the service.
-__2:__ The ModelServiceApiDriver parses the text of the command script file and passes it line by line to the ModelServiceApi.
-__3:__ The ModelServiceApi attempts to use the first part of the command and classify what type of command (e.g. definition, modification, viewing) to create.
-__4:__ Depending on the classification, the ModelServiceApi creates a specific type of command. This class then uses the remainder of the command text to validate the rest of the command.
-__5:__ Update the KnowledgeGraph with the new objects created.
-__6:__ Create the objects required for this command.
-__7:__ Run the specific logic for the command to execute it. 
-__8:__ The command uses or modifies the Model Objects as required.
-__9:__ Any messages that must be displayed to the user are delegated to the ModelServiceApiDriver class.
+__2:__ The ModelServiceApi passes each command in the script, line by line to the CommandParser class.
+__3:__ The CommandParser calls on the ModelServiceApi to update its Model registries.
+__4:__ The ModelServiceApi updates the KnowledgeGraph with new relationships between Model Objects.
+__5:__ Objects are created and interacted with to perform the Command.
 
 ## Class Diagram
 The class diagram for the Housemate Model Service is shown below:
@@ -267,24 +261,35 @@ The class diagram for the Housemate Model Service is shown below:
 @startuml
 scale max 800 width
 
-class ModelServiceApiDriver << (S,#FF7700) Singleton >> {
-    + processCommandScriptFile(in fileName: String) : void
-    + displayMessage(in message: String) : void
+package cscie97.asn2.housemate.model {
+
+interface ModelServiceApi {
+    + executeScript(in fileName: String) : void
 }
 
-class ModelServiceApi << (S,#FF7700) Singleton >> {
+class ModelServiceApiImpl << (S,#FF7700) Singleton >> {
     - knowledgeGraph : KnowledgeGraph
-    + executeCommand(in commandText: String) : void
+    - modelObjects : Map<String, ModelObject>
+    ~ addModelObject(in modelObject: ModelObject) : void
+    ~ getModelObject(in fullyQualifiedName: String) : ModelObject
+    ~ addOwnership(in owner: ModelObject, in owned: ModelObject) : void
+    ~ getOwnedObjects(in owner: ModelObject) : Set<String>
+    ~ getAllModelObjects() : Map<String, ModelObject>
 }
 
-class Command {
-    + Command(in scriptLineText: String)
-    + defineCommand(in scriptLineText: String)
-    + addOccupantToHouseCommand(in scriptLineText: String)
-    + setValueCommand(in scriptLineText: String)
-    + showConfigurationCommand(in scriptLineText: String)
-    + showEnergyUseCommand(in scriptLineText: String)
-    + showDeviceCommand(in scriptLineText: String)
+class CommandParser << (S,#FF7700) Singleton >> {
+    + executeCommand(in scriptLineText: String, in lineNumber: int) : void
+    - define(in remainingText: String) : void
+    - defineHouse(in remainingText: String) : void
+    - defineRoom(in remainingText: String) : void
+    - defineOccupant(in remainingText: String) : void
+    - defineSensor(in remainingText: String) : void
+    - defineAppliance(in remainingText: String) : void
+    - addOccupantToHouse(in remainingText: String) : void
+    - setValue(in remainingText: String) : void
+    - showDevice(in remainintText: String) : void
+    - showConfiguration(in remainingText: String) : void
+    - showEnergyUseCommand(in remainingText: String) : void
 }
 
 interface ModelObject {
@@ -294,22 +299,21 @@ interface ModelObject {
 
 class House {
     - name : String
+    - fullyQualifiedName : String
     - address : String
-    + addOccupant(in occupant : Occupant) : void
-    - getDevices() : Map<Device>
-    - deleteDefaultRoom() : void
 }
 
 class Room {
     - name : String
+    - fullyQualifiedName : String
     - type : String
     - floor : String
     - numWindows : int
-    - isDefaultRoom : boolean
 }
 
 class Occupant {
     - name : String
+    - fullyQualifiedName : String
     - type : OccupantType
     - isKnown : boolean
     - status : OccupantStatus
@@ -317,7 +321,8 @@ class Occupant {
 
 abstract Device {
     - name : String
-    - statuses : Map<String>
+    - fullyQualifiedName : String
+    - statuses : Map<String, String>
     - type : String
     + setStatus(in name : String, in value : String) : void
 }
@@ -329,13 +334,13 @@ class Sensor {
 class Appliance {
     - energyConsumptionWhenOnWatts : double
     + isOn() : boolean
-    - setIsOn(in isOn : boolean) : void
 }
 
 enum OccupantType {
     ADULT
     CHILD
     ANIMAL
+    PET
 }
 
 enum OccupantStatus {
@@ -350,22 +355,25 @@ interface EnergyReadable {
 interface Configurable {
     + getConfiguration() : String
 }
+}
 
+package cscie97.asn1.knowledge.engine{
 class KnowledgeGraph {
     + importTriple(in subject : String, in predicate String, in object String) : void
     + executeQuery(in subject : String, in predicate String, in object String) : Set<Triple>
-    + deleteTriple(in subject : String, in predicate String, in object String) : void
+}
 }
 
-ModelServiceApiDriver ..> ModelServiceApi
-ModelServiceApi "1" *-- "1" KnowledgeGraph
-ModelServiceApi ..> Command
-Command ..> KnowledgeGraph
+ModelServiceApi <|-- ModelServiceApiImpl
+ModelServiceApiImpl "1" *-- "1" KnowledgeGraph
+ModelServiceApiImpl ..> CommandParser
 Occupant ..> OccupantType
 Occupant ..> OccupantStatus
-Command ..> ModelObject
-Command <.. Device
-Command <.. EnergyReadable
+CommandParser ..> ModelObject
+CommandParser ..> EnergyReadable
+CommandParser ..> Configurable
+Room ..> KnowledgeGraph
+House ..> KnowledgeGraph
 ModelObject <|-- House
 ModelObject <|-- Room
 ModelObject <|-- Occupant
@@ -385,41 +393,43 @@ Room *-- "*" Device
 @enduml
 ```
 
-The top level class that users will interact with it the ModelServiceApiDriver. This class reads the script file and displays messages to users. The class delegates the validation and execution of the script file to the ModelServiceApi class.
+The top level class that users will interact with is the ModelServiceApi. This interface is implemented by the ModelServiceApiImpl class. This class reads the script file and delegates command execution to the CommandParser class. 
 
-The ModelServiceApi class is the main class responsible for validating and executing the script. It creates and categorizes Commands.
+The CommandParser class is the main class responsible for validating and executing commands.
 
-Commands are responsible for performing the business logic of a line in the script file. Concrete Command classes are created for different types of Commands.
+Commands are perform the business logic of a line in the script file. These Commands interact with the ModelServiceApiImpl class to maintain a registry of ModelObjects and the ModelSerivceApiImpl class interacts with the KnowledgeGraph to maintain relationships between ModelObjects.
 
 Commands use a variety of ModelObject classes to represent components in the Housemate Model Service. These objects represent several properties and implement various interfaces which allow different Commands to interact with them.
 
 ## Class Dictionary
 
-### ModelServiceApiDriver
-The ModelServiceApiDriver is the class that users interact with directly. It is responsible for running reading from the script file and displaying messages to the user.
-
-This class is a Singleton instance and follows the [Singleton Design Pattern](https://www.geeksforgeeks.org/system-design/singleton-design-pattern/).
-
-__Methods:__
-| Method Name | Signature | Description |
-|---|---|---|
-| processCommandScriptFile | void processCommandScriptFile(String fileName) | Process the content of a command script file and delegate handling the content of the file to the ModelServiceApi class. |
-| displayMessage | void displayMessage(String message) | Print the given message to the screen. |
-
 ### ModelServiceApi
-The ModelServiceApi is responsible for the validation and execution of a Command script. It classifies and creates Commands to handle the business logic of the API request.
+The ModelServiceApi is the public facing interface for external agents to interact with the Housemate Model Service. The interface is implemented by the ModelServiceApiImpl class.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| executeScript | void executeScript(String fileName) | Processes the content of a command script file and delegate handling of each line of the script to the CommandParser class. |
+
+### ModelServiceApiImpl
+The ModelServiceApiImpl is the main concrete class responsible for executing a command script and maintaining a registry of ModelObjects.
 
 This class is a Singleton instance and follows the [Singleton Design Pattern](https://www.geeksforgeeks.org/system-design/singleton-design-pattern/).
 
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| executeCommand | void executeScript(String commandText) | Calls on each Command created during the validation process to execute. |
+| addModelObject | void addModelObject(ModelObject modelObject) | Adds a ModelObject to the modelObjects registry. |
+| getModelObject | ModelObject getModelObject(String fullyQualifiedName) | Returns the ModelObject with the fullyQualifiedName. |
+| addOwnership | void addOwnership(ModelObject owner, ModelObject owned) | Updates the KnowledgeGraph to add an ownership relation between the two ModelObjects. |
+| getOwnedObjects | Set<String> getOwnedObjects(ModelObject owner) | Uses the KnowledgeGraph to find the fullyQualifiedName of all ModelObjects owned by the specified ModelObject. |
+| getAllModelObjects | Map<String, ModelObject> getAllModelObjects() | Gets all of the ModelObjects created by the Housemate Model Service. |
 
 __Associations:__
 | Association Name | Type | Description |
 |---|---|---|
-| knowledgeGraph | KnowledgeGraph | Maintains the ModelObjects and their associations. |
+| knowledgeGraph | KnowledgeGraph | Maintains the ownership relations of ModelObjects. |
+| modelObjects | Map<String, ModelObject> | Maintains a Map of all ModelObjects created by the Housemate Model Service. |
 
 ### KnowledgeGraph
 The KnowledgeGraph from assignment 1 is used to maintain the ModelObjects and their associations with each other. ModelObjects passed to the KnowledgeGraph are specified by their fully qualified name. The predicate used for ownership is "has_a".
@@ -429,21 +439,25 @@ __Methods:__
 |---|---|---|
 | importTriple | void importTriple(String subject, String predicate, String object) | Adds a new Triple to the KnowledgeGraph. |
 | executeQuery | void executeQuery(String subject, String predicate, String object) | Adds a new Triple to the KnowledgeGraph. |
-| deleteTriple | void deleteTriple(String subject, String predicate, String object) | Deletes the specified Triple if it exists. |
 
-### Command
-The Command interface encompasses the functionality to create nad execute Commands.
+### CommandParser
+The CommandParser encompasses the responsibility to parse, validate and execute an individual Command.
 
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| Command | Command(String scriptLineText) | Processes a command from the command text and delegates execution of the command to the appropriate method. |
-| defineCommand | void defineCommand(String scriptLineText) | Executes a command that creates a ModelObject. |
-| addOccupantToHouseCommand | void addOccupantToHouseCommand(String scriptLineText) | Executes a command that will associate an existing Occupant with an existing House. |
-| setValueCommand | setValueCommand(String scriptLineText) | Executes a command that sets a value of a Device. |
-| showConfigurationCommand | showConfigurationCommand(String scriptLineText) | Executes a command that displays the comfiguration of a ModelObject. |
-| showEnergyUseCommand | showEnergyUseCommand(String scriptLineText) | Executes a command that shows the current energy useage of all relevant Devices that are turned on. |
-| showDeviceCOmmand | showDeviceCommand(String scriptLineText) | Executes a command that shows information about a Device. |
+| executeCommand | void executeCommand(String scriptLineText, int lineNumber) | Processes a command from a line of the script file and delegates execution of the command to the appropriate method. |
+| define | void define(String remainingText) | Delegates the creation of a ModelObject to a specific method. |
+| defineHouse | void defineHouse(String remainingText) | Creates a new House from the provided Command. |
+| defineRoom | void defineHouse(String remainingText) | Creates a new Room from the provided Command. |
+| defineOccupant | void defineOccupant(String remainingText) | Creates a new Occupant from the provided Command. |
+| defineSensor | void defineSensor(String remainingText) | Creates a new Sensor from the provided Command. |
+| defineAppliance | void defineAppliance(String remainingText) | Creates a new Appliance from the provided Command. |
+| addOccupantToHouse | void addOccupantToHouse(String remainingText) | Executes a command that will associate an existing Occupant with an existing House. |
+| setValue | setValue(String remainingText) | Executes a command that sets a value of a Device. |
+| showDevice | showDevice(String remainingText) | Executes a command that shows information about a Device. |
+| showConfiguration | showConfiguration(String remainingText) | Executes a command that displays the comfiguration of a ModelObject. |
+| showEnergyUse | showEnergyUse(String remainingText) | Executes a command that shows the current energy useage of a ModelObject and its owned ModelObjects that are turned on. |
 
 ### ModelObject
 The ModelObject interface represents a component in the Housemates system that Commands can interact with.
@@ -452,7 +466,7 @@ __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
 | getName | String getName() | Gets the name of this ModelObject. |
-| getFullyQualifiedName | String getFullyQualifiedName() | Gets the name of the ModelObject preceded by its owning objects, separated by colons (e.g. "House1:Room2:Thermostat").
+| getFullyQualifiedName | String getFullyQualifiedName() | Gets the name of the ModelObject preceded by its type and its owning objects, separated by colons (e.g. "house_House1:room_Room2:sensor_Thermostat").
 
 ### Configurable
 The Configurable interface is used for the ShowConfiguration Command to interact with certain ModelObjects to display their configuration.
@@ -474,16 +488,13 @@ __Methods:__
 Represents a house in the Housemates system.
 
 __Methods:__
-| Method Name | Signature | Description |
-|---|---|---|
-| addOccupant | void addOccupant(Occupant occupant) | Creates a new Occupant and associates it with the House. |
-| getDevices | Map<Device> getDevices() | Returns a Map of all the Devices associated through Rooms with the House. |
-| deleteDefaultRoom | void deleteDefaultRoom() | Deletes the default room associated with a House when a non-default Room has been created. |
+Only methods declared in ModelObject, Configurable and EnergyReadable interfaces.
 
 __Properties:__
 | Property Name | Type | Description |
 |---|---|---|
 | name | String | The globally unique name of the House. |
+| fullyQualifiedName | String | The fully qualified name of the House. |
 | address | String | The address of the house. |
 
 ### Room
@@ -493,10 +504,10 @@ __Properties:__
 | Property Name | Type | Description |
 |---|---|---|
 | name | String | The name of the Room, unique within the House. |
+| fullyQualifiedName | String | The fully qualified name of the Room. |
 | type | String | The type of room (e.g. bedroom, kitchen...) |
 | floor | String | The floor of the Room. This is a String to have the ability to represent floors such as "Ground Floor", "Basement". |
 | numWindows | int | The number of windows in the Room. |
-| isDefaultRoom | boolean | Is this Room the default Room created when a new House is defined? |
 
 ### Occupant
 Represents an Occupant in the Housemate system.
@@ -505,6 +516,7 @@ __Properties:__
 | Property Name | Type | Description |
 |---|---|---|
 | name | String | The globally unique name of the Occupant. |
+| fullyQualifiedName | String | The fully qualified name of the Occupant. |
 | isKnown | boolean | Whether the occupant is known (family member, pet...) or unknown (intuder, guest...) |
 
 __Associations:__
@@ -537,18 +549,14 @@ The Device class is an abstract class used to represent Sensors and Appliances i
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| setStatus | void setStatus(Status status) | Sets a status of the Device to a certain value. |
+| setStatus | void setStatus(String name, String value) | Sets a status of the Device to a certain value. |
 
 __Properties:__
 | Property Name | Type | Description |
 |---|---|---|
 | name | String | The name of the Device, unique within the Room. |
+| fullyQualifiedName | String | The fully qualified name of the Device. |
 | type | String | The type of Device (e.g. thermostat, TV...) |
-
-__Associations:__
-| Association Name | Type | Description |
-|---|---|---|
-| statuses | Map\<String> | The statuses associated with the Device. |
 
 ### Sensor
 The Sensor class is a concrete implementation of the Device class, used to represent a Sensor in the Housemate system. It does not have any additional methods or attributes from the Device class, but is being created as a separate class as it ties closes to business logic and may be needed in the future.
@@ -559,8 +567,12 @@ The Appliance class is a concrete implementation of the Device class that can be
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| isOn | boolean isOn() | Returns whether the Appliance is powered on. |
-| setIsOn | boolean setIsOn() | Sets the Appliance to be on or off based on the Appliance Status as described in the requirements. |
+| isOn | boolean isOn() | Returns whether the Appliance is powered on. This will return true when a status called "power" has the value of "on". |
+
+__Properties:__
+| Property Name | Type | Description |
+|---|---|---|
+| energyConsumptionWhenOnWatts  | double | The energy consumption of the Appliance when it is turned on, in Watts. |
 
 ## Exception Handling
 There are a few exceptions that must be handled in processing a command script.

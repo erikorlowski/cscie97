@@ -6,7 +6,7 @@ import java.util.Map;
  * The Appliance class represents an appliance device in the housemate system.
  * It extends the Device class and implements the Configurable and EnergyReadable interfaces.
  */
-public class Appliance extends Device implements Configurable, EnergyReadable {
+class Appliance extends Device implements Configurable, EnergyReadable {
     private double energyConsumptionWhenOnWatts;
     
     /**
