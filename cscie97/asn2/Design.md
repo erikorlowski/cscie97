@@ -190,7 +190,7 @@ The user will call on the Model Service to run a script. That script will then b
 
 ```plantuml
 @startuml
-actor User
+actor Administrator
 actor Controller as "Housemate Controller Service"
 rectangle Service as "Housemate Model Service" {
     usecase RunScript as "Run API Services"
@@ -203,7 +203,7 @@ rectangle Service as "Housemate Model Service" {
 }
 
 
-User -- RunScript
+Administrator -- RunScript
 Controller -- RunScript
 RunScript ..> Execute
 Execute ..> Command
@@ -221,9 +221,7 @@ At a high level, when a command script is passed in by a user, the processessing
 
 The ModelServiceApi class is the class responsible for the validation and execution of the command script.
 
-The ModelServiceApi uses the CommandFactory to create each command. The CommandFactory is responsible for reading the first part of the command text and deciding what type of command it is. The CommandFactory class then creates a specific concrete Command.
-
-The concrete Command class is then responsible for final validation and execution of the command text.
+The ModelServiceApi uses the the Command class to classify and execute each Command.
 
 A high level view of the happy path process to execute a Command Script is shown in the sequence diagram below.
 
@@ -236,7 +234,6 @@ autonumber
 actor User
 participant ModelServiceApiDriver
 participant ModelServiceApi
-participant CommandFactory
 participant Command as "Concrete Command"
 participant Obj as "Model Object"
 
@@ -280,34 +277,14 @@ class ModelServiceApi << (S,#FF7700) Singleton >> {
     + executeCommand(in commandText: String) : void
 }
 
-interface Command {
+class Command {
     + Command(in scriptLineText: String)
-}
-
-class Define {
-    - object : ModelObject
-}
-
-class AddOccupantToHouse {
-    - occupant : Occupant
-    - house : House
-}
-
-class SetValue {
-    - device : Device
-    - status : Status
-}
-
-class ShowConfiguration {
-    - configuredObject : Configurable
-}
-
-class ShowEnergyUse {
-    - energyUser : EnergyReadable
-}
-
-class ShowDevice {
-    - device : Device
+    + defineCommand(in scriptLineText: String)
+    + addOccupantToHouseCommand(in scriptLineText: String)
+    + setValueCommand(in scriptLineText: String)
+    + showConfigurationCommand(in scriptLineText: String)
+    + showEnergyUseCommand(in scriptLineText: String)
+    + showDeviceCommand(in scriptLineText: String)
 }
 
 interface ModelObject {
@@ -340,9 +317,9 @@ class Occupant {
 
 abstract Device {
     - name : String
-    - statuses : Map<Status>
+    - statuses : Map<String>
     - type : String
-    + setStatus(in status : Status) : void
+    + setStatus(in name : String, in value : String) : void
 }
 
 class Sensor {
@@ -366,11 +343,6 @@ enum OccupantStatus {
     SLEEPING
 }
 
-class Status {
-    - name : String
-    - value : String
-}
-
 interface EnergyReadable {
     + getCurrentEnergyConsumptionWatts() : double
 }
@@ -391,20 +363,9 @@ ModelServiceApi ..> Command
 Command ..> KnowledgeGraph
 Occupant ..> OccupantType
 Occupant ..> OccupantStatus
-Define o-- ModelObject
-ShowDevice o-- Device
-ShowEnergyUse o-- EnergyReadable
-SetValue o-- Device
-AddOccupantToHouse o-- House
-AddOccupantToHouse o-- Occupant
-ShowConfiguration o-- Configurable
-Command <|-- Define
-Command <|-- AddOccupantToHouse
-Command <|-- SetValue
-Command <|-- ShowConfiguration
-Command <|-- ShowEnergyUse
-Command <|-- ShowDevice
 Command ..> ModelObject
+Command <.. Device
+Command <.. EnergyReadable
 ModelObject <|-- House
 ModelObject <|-- Room
 ModelObject <|-- Occupant
@@ -417,7 +378,6 @@ EnergyReadable <|-- Appliance
 Configurable <|-- House
 Configurable <|-- Room
 Configurable <|-- Appliance
-Device *-- "*" Status
 House *-- "1..*" Room
 House "*" o-- "*" Occupant
 Room *-- "*" Device
@@ -477,48 +437,13 @@ The Command interface encompasses the functionality to create nad execute Comman
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| Command | Command(String scriptLineText) | Provisionally creates a new Command from a line of the script and creates the relevant ModelObjects. If an error occurs in creating the Command, throw an exception. |
-
-### SetValue
-The SetValue class is an implementation of the Command interface used to handle Commands involving setting the value of a Device.
-
-__Associations:__
-| Association Name | Type | Description |
-|---|---|---|
-| device | Device | The Device that will have a value set. |
-| status | Status | Information about the status and the value to set the status to. |
-
-### ShowEnergyUse
-The ShowEnergyUse class is an implementation of the Command interface that displays the current energy use of an object in Watts.
-
-__Associations:__
-| Association Name | Type | Description |
-|---|---|---|
-| energyUser | EnergyReadable | The object to get the current energy useage from. |
-
-### ShowConfiguration
-The ShowConfiguration class is an implementation of the Command interface that displays the configuration of an object.
-
-__Associations:__
-| Association Name | Type | Description |
-|---|---|---|
-| configuredObject | Configurable | The object to get the configuration from. |
-
-### Define
-The Define class is an implementation of the Command interface that creates a new ModelObject.
-
-__Associations:__
-| Association Name | Type | Description |
-|---|---|---|
-| object | ModelObject | The object to be created. |
-
-### ShowDevice
-The ShowDevice class is an implementation of the Command interface that shows information about a device.
-
-__Association:__
-| Association Name | Type | Description |
-|---|---|---|
-| device | Device | The Device to show information from. |
+| Command | Command(String scriptLineText) | Processes a command from the command text and delegates execution of the command to the appropriate method. |
+| defineCommand | void defineCommand(String scriptLineText) | Executes a command that creates a ModelObject. |
+| addOccupantToHouseCommand | void addOccupantToHouseCommand(String scriptLineText) | Executes a command that will associate an existing Occupant with an existing House. |
+| setValueCommand | setValueCommand(String scriptLineText) | Executes a command that sets a value of a Device. |
+| showConfigurationCommand | showConfigurationCommand(String scriptLineText) | Executes a command that displays the comfiguration of a ModelObject. |
+| showEnergyUseCommand | showEnergyUseCommand(String scriptLineText) | Executes a command that shows the current energy useage of all relevant Devices that are turned on. |
+| showDeviceCOmmand | showDeviceCommand(String scriptLineText) | Executes a command that shows information about a Device. |
 
 ### ModelObject
 The ModelObject interface represents a component in the Housemates system that Commands can interact with.
@@ -595,6 +520,7 @@ The OccupantType is an enum which classifies Occupants as:
 |---|
 | ADULT |
 | CHILD |
+| PET |
 | ANIMAL |
 
 ### OccupantStatus
@@ -622,7 +548,7 @@ __Properties:__
 __Associations:__
 | Association Name | Type | Description |
 |---|---|---|
-| statuses | Map<Status> | The statuses associated with the Device. |
+| statuses | Map\<String> | The statuses associated with the Device. |
 
 ### Sensor
 The Sensor class is a concrete implementation of the Device class, used to represent a Sensor in the Housemate system. It does not have any additional methods or attributes from the Device class, but is being created as a separate class as it ties closes to business logic and may be needed in the future.
@@ -636,15 +562,6 @@ __Methods:__
 | isOn | boolean isOn() | Returns whether the Appliance is powered on. |
 | setIsOn | boolean setIsOn() | Sets the Appliance to be on or off based on the Appliance Status as described in the requirements. |
 
-### Status
-The Status class encapsulates a status and a value the status is set to for a Device.
-
-__Properties:__
-| Property Name | Type | Description |
-|---|---|---|
-| name | String | The name of the Status, unique within the Device. |
-| value | String | The current value of the Status. |
-
 ## Exception Handling
 There are a few exceptions that must be handled in processing a command script.
 
@@ -654,7 +571,7 @@ First, any exceptions related to opening or reading from the command script file
 
 Next, any issues with the formatting of a command such that the command type cannot be ascertained are handled by the ModelServiceApi class.
 
-Any issues dealing with the syntax of a classified command, or with finding an identifier are handled by the concrete Command class.
+Any issues dealing with the syntax of a command or with finding an identifier are handled by the Command class.
 
 In all cases, these exceptions cause the execution of the command and the script to stop. The effects from any previously executed commands are not undone.
 
