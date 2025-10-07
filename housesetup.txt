@@ -1,4 +1,4 @@
-﻿#        define houses
+#        define houses
 define house house1 address "1 Story Street, Cambridge, MA"
 define house house2 address “33 Church Street, Cambridge, MA”
 

@@ -38,8 +38,19 @@ class Room implements ModelObject, EnergyReadable, Configurable {
      */
     @Override
     public String getConfiguration() {
-        return String.format("\nRoom Configuration:\nRoom: name=%s, type=%s, floor=%s, numWindows=%d\n",
-                name, type, floor, numWindows);
+        StringBuilder sb = new StringBuilder(String.format
+        ("\nRoom Configuration:\nRoom: name=%s, type=%s, floor=%s, numWindows=%d\n", name, type, floor, numWindows));
+
+        Set<String> devices = ModelServiceApiImpl.getInstance().getOwnedObjects(this);
+
+        for (String deviceName : devices) {
+            ModelObject obj = ModelServiceApiImpl.getInstance().getModelObject(deviceName);
+            if (obj instanceof Appliance) {
+                sb.append(((Appliance) obj).getConfiguration());
+            }
+        }
+
+        return sb.toString();
     }
 
     /**

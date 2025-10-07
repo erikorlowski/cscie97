@@ -86,7 +86,7 @@ public class ModelServiceApiImpl implements ModelServiceApi {
      * @throws IllegalArgumentException if the file cannot be read
      */
     public void executeScript(String filename, char[] authenticationKey) {
-        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(filename, java.nio.charset.StandardCharsets.UTF_8))) {
             String line;
             int lineNumber = 1;
             while ((line = br.readLine()) != null) {

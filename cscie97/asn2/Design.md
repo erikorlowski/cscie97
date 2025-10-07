@@ -591,8 +591,15 @@ In all cases, these exceptions cause the execution of the command and the script
 ### Sample Script Test
 The implementation of this design shall be tested with the sample script provided in the assignment.
 
+### Energy Use Test
+The energy useage calculations shall be verified to ensure:
+* The power value being turned on and off has the correct effect
+* Appliance power consumption correctly rolls up to Room power consumption
+* Room power consumption correctly rolls up to House power consumption
+* House power consumption correctly rolls up to overall power consumption
+
 ### Duplicate Name Test
-For every class that has duplicate name requirements, an attempt will be made to make objects with duplicate names, to verify that this is disallowed.
+For every class that has duplicate name requirements, an attempt will be made to make objects with duplicate names, to verify that a duplicate object is not created.
 
 ### Invalid Syntax Test
 This test shall pass script files with undefined commands, disallowed characters in names and an incorrect number of whitespace separated words and verify that these validation failures are correctly handled.

@@ -38,9 +38,10 @@ class CommandParser {
      * @throws IllegalArgumentException if the script line is null, unrecognized, or invalid for a matched command
      */
     void executeCommand(String scriptLineText, int lineNumber) {
+        System.out.println("Char 1 of line " + lineNumber + ": " + (scriptLineText != null && !scriptLineText.isEmpty() ? new Character(scriptLineText.charAt(2)).hashCode() : "N/A"));
         this.lineNumber = lineNumber;
 
-        if (scriptLineText != null && !scriptLineText.isEmpty() &&scriptLineText.charAt(0) == '\uFEFF') {
+        if (scriptLineText != null && !scriptLineText.isEmpty() && (scriptLineText.charAt(0) == '\uFEFF' || (int) scriptLineText.charAt(0) == 239)) {
             // Remove BOM if present
             scriptLineText = scriptLineText.substring(1);
         }

@@ -29,7 +29,16 @@ class House implements ModelObject, Configurable, EnergyReadable {
      */
     @Override
     public String getConfiguration() {
-        return String.format("\nHouse Configuration:\nHouse: name=%s, address=%s\n", name, address);
+        StringBuilder sb = new StringBuilder(String.format("\nHouse Configuration:\nHouse: name=%s, address=%s\n", name, address));
+
+        for (String roomName : ModelServiceApiImpl.getInstance().getOwnedObjects(this)) {
+            ModelObject obj = ModelServiceApiImpl.getInstance().getModelObject(roomName);
+            if (obj instanceof Room) {
+                sb.append(((Room) obj).getConfiguration());
+            }
+        }
+
+        return sb.toString();
     }
 
     /**
