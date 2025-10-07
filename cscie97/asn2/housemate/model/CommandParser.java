@@ -537,7 +537,7 @@ public class CommandParser {
     }
 
     /**
-     * Handle "show ... status ..." or "show ... configuration" commands for devices.
+     * Handle "show ... status ..." commands for devices.
      * Prints either a specific status value or all statuses for a device.
      *
      * @param remainingText the text following the "show sensor|appliance" token

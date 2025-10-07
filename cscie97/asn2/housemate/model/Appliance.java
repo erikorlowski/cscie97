@@ -2,9 +2,19 @@ package cscie97.asn2.housemate.model;
 
 import java.util.Map;
 
+/**
+ * The Appliance class represents an appliance device in the housemate system.
+ * It extends the Device class and implements the Configurable and EnergyReadable interfaces.
+ */
 public class Appliance extends Device implements Configurable, EnergyReadable {
     private double energyConsumptionWhenOnWatts;
     
+    /**
+     * Constructs an Appliance with the specified fully qualified name, type, and energy consumption when on.
+     * @param fullyQualifiedName the fully qualified name of the appliance
+     * @param type the type of the appliance
+     * @param energyConsumptionWhenOnWatts the energy consumption of the appliance when it is on, in watts
+     */
     public Appliance(String fullyQualifiedName, String type, double energyConsumptionWhenOnWatts) {
         super(fullyQualifiedName, type);
         this.energyConsumptionWhenOnWatts = energyConsumptionWhenOnWatts;
@@ -41,7 +51,7 @@ public class Appliance extends Device implements Configurable, EnergyReadable {
     @Override
     public String getConfiguration() {
         StringBuilder config = new StringBuilder();
-        config.append("Appliance Configuration:\n");
+        config.append("\nAppliance Configuration:\n");
         config.append("Name: ").append(getName()).append("\n");
         config.append("Type: ").append(getType()).append("\n");
         config.append("Energy Consumption When On (Watts): ").append(energyConsumptionWhenOnWatts).append("\n");
@@ -49,6 +59,7 @@ public class Appliance extends Device implements Configurable, EnergyReadable {
         for (Map.Entry<String, String> entry : super.statuses.entrySet()) {
             config.append("  ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
         }
+        config.append("\n");
         return config.toString();
     }
 }

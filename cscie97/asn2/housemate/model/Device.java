@@ -22,7 +22,7 @@ public abstract class Device implements ModelObject {
      */
     public Device(String fullyQualifiedName, String type) {
         this.fullyQualifiedName = fullyQualifiedName;
-        this.name = fullyQualifiedName.split(":", 3)[2];
+        this.name = fullyQualifiedName.split(":", 3)[2].split("(sensor|appliance)_", 2)[1];
         this.type = type;
     }
 

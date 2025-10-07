@@ -10,6 +10,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+/**
+ * The ModelServiceApi class provides a singleton API for managing model objects in the housemate system.
+ * It maintains a registry of model objects and interacts with the knowledge graph to record relationships.
+ */
 public class ModelServiceApi {
     private static ModelServiceApi instance = null;
     private Map <String, ModelObject> modelObjects = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
