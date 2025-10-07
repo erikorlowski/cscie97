@@ -24,7 +24,7 @@ class Room implements ModelObject, EnergyReadable, Configurable {
      */
     public Room(String fullyQualifiedName, String type, String floor, int numWindows) {
         this.fullyQualifiedName = fullyQualifiedName;
-        this.name = fullyQualifiedName.split(":", 2)[1];
+        this.name = fullyQualifiedName.split(":", 2)[1].split("room_", 2)[1];
         this.type = type;
         this.floor = floor;
         this.numWindows = numWindows;
