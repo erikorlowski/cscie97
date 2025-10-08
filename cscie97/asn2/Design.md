@@ -31,7 +31,6 @@ A Room shall model an individual Room. Each Room will be associated with one and
 * A unique name of the Room within the House
 * The number of windows
 * The current aggregate energy consumption of all the Appliances in the Room that are turned on, in Watts.
-* The Occupants known to be in the Room
 * The Devices in the Room
 
 __Requirement: Room Name Uniqueness__
@@ -133,22 +132,22 @@ When executed, this command shall display the specified Device's status and valu
 __Requirement: Show Configuration Command__
 A CLI command to show the configuration of all Houses shall be defined with the following syntax:
 ```show configuration```
-When executed, this command shall display a list of all Houses with their names, addresses, number of Rooms and a list of Occupant names.
+When executed, this command shall display a list of all Houses, Rooms and Appliances in the Housemate system.
 
 __Requirement: Show House Configuration Command__
 A CLI command to show the configuration of a House shall be defined with the following syntax:
 ```show configuration <house_name>```
-When executed, this command shall display the House's name, address, the number of Rooms and a list of Occupant names.
+When executed, this command shall display the House's name, address, Rooms and Appliances.
 
 __Requirement: Show Room Configuration Command__
 A CLI command to show the configuration of a Room shall be defined with the following syntax:
 ```show configuration <house_name>:<room_name>```
-When executed, this command shall display the House name, Room name, the Room type, the number of windows in the room and a list of the Devices in the room with each Device's name.
+When executed, this command shall display the Room name, floor, number of windows and Appliances.
 
 __Requirement: Show Appliance Configuration Command__
 A CLI command to show the configuration of an Appliance shall be defined with the following syntax:
 ```show configuration <house_name>:<room_name>:<appliance>```
-When executed, this command shall display the House name, Room name, Appliance name, Appliance type, Appliance status and the energy usage of the device when turned on.
+When executed, this command shall display the name, type, energy consumption when on and statuses of the Appliance.
 
 __Requirement: Show Energy Useage of All Houses Command__
 A CLI command to show the energy useage for all Houses shall be defined with the following syntax:
@@ -172,10 +171,6 @@ When executed, this command shall display the current energy consumption of the 
 
 __Requirement: Line Comments__
 Any line where the first non-whitespace character is a "#" shall be considered a comment and not executed.
-
-__Requirement: Disallowed Characters__
-Any identifier or Device value that includes a colon ":" shall be rejected.
-_Rationale:_ These characters are included in the command syntax, so allowing these characters would unneccessarily complicate the processing of commands.
 
 ### Script Execution
 __Requirement: Script Validation__
@@ -601,11 +596,5 @@ The energy useage calculations shall be verified to ensure:
 ### Duplicate Name Test
 For every class that has duplicate name requirements, an attempt will be made to make objects with duplicate names, to verify that a duplicate object is not created.
 
-### Invalid Syntax Test
-This test shall pass script files with undefined commands, disallowed characters in names and an incorrect number of whitespace separated words and verify that these validation failures are correctly handled.
-
-### Script Partially Ran Test
-This test shall run a script to create and modify objects, with a command at the end of the script that will fail. It shall be verified that the script preserves the effects to the Housemate Model of the successfully executed Commands.
-
 ## Risks
-The primary risk of this design is in classifying types of commands. The design as it stands requires many class definitions that might not scale well with a large number of commands, such as opening up the system to third party commands. In addition to this, the process of classifying a command will take place in O(n) time, with n representing the number of commands. If the number of command types were to grow significantly, this would create performance issues.
+The primary risk of this design is in classifying types of commands. The design as it stands requires a lot of custom String processing that might not scale well with a large number of commands, such as opening up the system to third party commands. In addition to this, the process of classifying a command will take place in O(n) time, with n representing the number of commands. If the number of command types were to grow significantly, this would create performance issues.

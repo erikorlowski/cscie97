@@ -1,0 +1,253 @@
+oven1_1 status temperature: 350
+oven1_1 statuses: {power=ON, temperature=350}
+smoke_detector1_1 statuses: {fire=active}
+smoke_detector1_1 statuses: {fire=active}
+Configuration for all houses:
+
+House Configuration:
+House: name=house1, address=1 Story Street, Cambridge, MA
+
+Room Configuration:
+Room: name=bedroom2, type=bedroom, floor=2, numWindows=2
+
+Room Configuration:
+Room: name=livingroom, type=livingroom, floor=1, numWindows=4
+
+Room Configuration:
+Room: name=kitchen, type=kitchen, floor=1, numWindows=2
+
+Appliance Configuration:
+Name: refrigerator1_1
+Type: refrigerator
+Energy Consumption When On (Watts): 100.0
+Current Statuses:
+
+
+Appliance Configuration:
+Name: oven2_1
+Type: oven
+Energy Consumption When On (Watts): 700.0
+Current Statuses:
+
+
+Appliance Configuration:
+Name: oven1_1
+Type: oven
+Energy Consumption When On (Watts): 500.0
+Current Statuses:
+  power: ON
+  temperature: 350
+
+
+Room Configuration:
+Room: name=bathroom1, type=bathroom, floor=1, numWindows=0
+
+Room Configuration:
+Room: name=bathroom2, type=bathroom, floor=2, numWindows=1
+
+Room Configuration:
+Room: name=bedroom1, type=bedroom, floor=2, numWindows=3
+
+
+House Configuration:
+House: name=house2, address=33 Church Street, Cambridge, MA
+
+Room Configuration:
+Room: name=livingroom, type=livingroom, floor=1, numWindows=2
+
+Room Configuration:
+Room: name=kitchen, type=kitchen, floor=1, numWindows=1
+
+Appliance Configuration:
+Name: refrigerator2_1
+Type: refrigerator
+Energy Consumption When On (Watts): 100.0
+Current Statuses:
+
+
+Room Configuration:
+Room: name=bedroom3, type=bedroom, floor=2, numWindows=2
+
+Room Configuration:
+Room: name=bedroom2, type=bedroom, floor=2, numWindows=2
+
+Room Configuration:
+Room: name=bedroom1, type=bedroom, floor=2, numWindows=4
+
+Room Configuration:
+Room: name=diningroom, type=diningroom, floor=1, numWindows=2
+
+Room Configuration:
+Room: name=bathroom1, type=bathroom, floor=1, numWindows=1
+
+Room Configuration:
+Room: name=bathroom2, type=bathroom, floor=2, numWindows=1
+
+
+House Configuration:
+House: name=house1, address=1 Story Street, Cambridge, MA
+
+Room Configuration:
+Room: name=bedroom2, type=bedroom, floor=2, numWindows=2
+
+Room Configuration:
+Room: name=livingroom, type=livingroom, floor=1, numWindows=4
+
+Room Configuration:
+Room: name=kitchen, type=kitchen, floor=1, numWindows=2
+
+Appliance Configuration:
+Name: refrigerator1_1
+Type: refrigerator
+Energy Consumption When On (Watts): 100.0
+Current Statuses:
+
+
+Appliance Configuration:
+Name: oven2_1
+Type: oven
+Energy Consumption When On (Watts): 700.0
+Current Statuses:
+
+
+Appliance Configuration:
+Name: oven1_1
+Type: oven
+Energy Consumption When On (Watts): 500.0
+Current Statuses:
+  power: ON
+  temperature: 350
+
+
+Room Configuration:
+Room: name=bathroom1, type=bathroom, floor=1, numWindows=0
+
+Room Configuration:
+Room: name=bathroom2, type=bathroom, floor=2, numWindows=1
+
+Room Configuration:
+Room: name=bedroom1, type=bedroom, floor=2, numWindows=3
+
+
+Room Configuration:
+Room: name=kitchen, type=kitchen, floor=1, numWindows=2
+
+Appliance Configuration:
+Name: refrigerator1_1
+Type: refrigerator
+Energy Consumption When On (Watts): 100.0
+Current Statuses:
+
+
+Appliance Configuration:
+Name: oven2_1
+Type: oven
+Energy Consumption When On (Watts): 700.0
+Current Statuses:
+
+
+Appliance Configuration:
+Name: oven1_1
+Type: oven
+Energy Consumption When On (Watts): 500.0
+Current Statuses:
+  power: ON
+  temperature: 350
+
+
+
+Appliance Configuration:
+Name: oven1_1
+Type: oven
+Energy Consumption When On (Watts): 500.0
+Current Statuses:
+  power: ON
+  temperature: 350
+
+
+Total energy use for all houses: 500.0
+house1 energy use: 500.0
+kitchen energy use: 500.0
+oven1_1 energy use: 500.0
+Configuration for all houses:
+
+House Configuration:
+House: name=house1, address=1 Story Street, Cambridge, MA
+
+Room Configuration:
+Room: name=bedroom2, type=bedroom, floor=2, numWindows=2
+
+Room Configuration:
+Room: name=livingroom, type=livingroom, floor=1, numWindows=4
+
+Room Configuration:
+Room: name=kitchen, type=kitchen, floor=1, numWindows=2
+
+Appliance Configuration:
+Name: refrigerator1_1
+Type: refrigerator
+Energy Consumption When On (Watts): 100.0
+Current Statuses:
+
+
+Appliance Configuration:
+Name: oven2_1
+Type: oven
+Energy Consumption When On (Watts): 700.0
+Current Statuses:
+
+
+Appliance Configuration:
+Name: oven1_1
+Type: oven
+Energy Consumption When On (Watts): 500.0
+Current Statuses:
+  power: ON
+  temperature: 350
+
+
+Room Configuration:
+Room: name=bathroom1, type=bathroom, floor=1, numWindows=0
+
+Room Configuration:
+Room: name=bathroom2, type=bathroom, floor=2, numWindows=1
+
+Room Configuration:
+Room: name=bedroom1, type=bedroom, floor=2, numWindows=3
+
+
+House Configuration:
+House: name=house2, address=33 Church Street, Cambridge, MA
+
+Room Configuration:
+Room: name=livingroom, type=livingroom, floor=1, numWindows=2
+
+Room Configuration:
+Room: name=kitchen, type=kitchen, floor=1, numWindows=1
+
+Appliance Configuration:
+Name: refrigerator2_1
+Type: refrigerator
+Energy Consumption When On (Watts): 100.0
+Current Statuses:
+
+
+Room Configuration:
+Room: name=bedroom3, type=bedroom, floor=2, numWindows=2
+
+Room Configuration:
+Room: name=bedroom2, type=bedroom, floor=2, numWindows=2
+
+Room Configuration:
+Room: name=bedroom1, type=bedroom, floor=2, numWindows=4
+
+Room Configuration:
+Room: name=diningroom, type=diningroom, floor=1, numWindows=2
+
+Room Configuration:
+Room: name=bathroom1, type=bathroom, floor=1, numWindows=1
+
+Room Configuration:
+Room: name=bathroom2, type=bathroom, floor=2, numWindows=1
+
+Script houseSetup.txt executed successfully.

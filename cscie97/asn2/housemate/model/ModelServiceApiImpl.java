@@ -41,7 +41,7 @@ public class ModelServiceApiImpl implements ModelServiceApi {
      * @param modelObject the ModelObject to add; its fully qualified name is used as the key
      */
     void addModelObject(ModelObject modelObject) {
-        modelObjects.put(modelObject.getFullyQualifiedName(), modelObject);
+        modelObjects.putIfAbsent(modelObject.getFullyQualifiedName(), modelObject);
     }
 
     /**
