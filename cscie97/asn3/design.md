@@ -92,3 +92,60 @@ Models -up- View
 This diagram depicts how an Occupant or Device has its actions or inputs interpreted by the Housemate Controller Service to execute a command. The Housemate Controller Service then calls on the Housemate Model Service to update Model Objects based on the result of the command.
 
 ## Implementation
+A high level view of the use of the Housemate Model Service and Housemate Controller Service is shown below.
+
+Activities colored in pink are the responsibility of the Housemate Controller Service.
+
+```plantuml
+@startuml
+start
+:Command Script Entered;
+repeat :TestDriver Interprets Line;
+    if (Line Is Model Service Command) then (yes)
+        if (Error) then
+            :Display Error Message;
+            stop
+        endif
+        :Housemate Model Service Executes Command;
+        #Pink:if (Smoke Detector or Refrigerator Created) then (yes)
+            #Pink:Register Status Observer;
+        else (no)
+        endif
+        #Pink:if (Device Status Change) then (yes)
+            #Pink:Notify Status Observers;
+        else (no)
+        endif
+        #Pink:if (Occupant Defined) then (yes)
+            #Pink:Set Occupant Location to Unknown;
+        else (no)
+        endif
+    elseif (Line is Controller Service Command) then (yes)
+        #Pink:if (Error) then
+            #Pink:Display Error Message;
+            stop
+        endif
+        #Pink:CommandFactory Chooses Correct Command Class;
+        #Pink:Command is Created;
+        #Pink:Command is Executed;
+        :Housemate Model Service Responds to API Call(s);
+    else (no)
+        :Display Error Message;
+        stop
+    endif
+repeat while (Last Line?) is (no)
+->yes;
+stop
+@enduml
+```
+
+When a command is run by the Housemate Model Service, the output of that command is then sent to the Housemate Controller Service to process it.
+
+If a Smoke Detector or Refrigerator are created, then they must register to observe status changes in order to respond to fires or changes in the beer counts respectively.
+
+If a Device status changes, then all registered observers are notified with details of the new status and these observers can decide if a Command needs to be executed in response to the new status.
+
+If an Occupant is defined, the Housemate Controller Service's KnowledgeGraph needs to be updated with the new Occupant and an unknown location.
+
+When a command is run directly by the Housemate Controller Service, first, the command is validated. If the line is validated, the type of Command class is classified. Then, the Command is Executed.
+
+Many Command executions require calling the Housemate Model Service API to make necessary updates to Model Objects.
