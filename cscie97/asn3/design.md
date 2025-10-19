@@ -149,3 +149,134 @@ If an Occupant is defined, the Housemate Controller Service's KnowledgeGraph nee
 When a command is run directly by the Housemate Controller Service, first, the command is validated. If the line is validated, the type of Command class is classified. Then, the Command is Executed.
 
 Many Command executions require calling the Housemate Model Service API to make necessary updates to Model Objects.
+
+## Class Diagram
+The class diagram for the Housemate Controller Service is shown below.
+
+```plantuml
+@startuml
+scale max 800 width
+set separator :
+top to bottom direction
+
+package cscie97.asn2.housemate.controller {
+    interface ControllerServiceApi {
+        + executeControllerCommand(in commandText: String) : String
+        + useModelServiceOutput(in modelServiceOutputText: String) : String
+    }
+
+    class ControllerServiceApiImpl {
+        
+    }
+
+    class OccupantTracker << (S,#FF7700) Singleton >> {
+        - occupantKnowledgeGraph : KnowledgeGraph
+        + addOccupantToRoom(in occupantName: String, in fullyQualifiedRoomName: String) : void
+        + removeOccupantFromRoom(in occupantName: String, in fullyQualifiedRoomName: String) : void
+        + makeOccupantActive(in occupantName: String) : void
+        + makeOccupantInactive(in occupantName: String) : void
+    }
+
+    class StatusSubject << (S,#FF7700) Singleton >> {
+        - observers : StatusObserver[]
+        + registerObserver(in observer: StatusObserver) : void
+        + notifyObservers() : void
+    }
+
+    interface StatusObserver {
+        + onStatusUpdate(in device: String, in status: String, in newValue: String) : void
+    }
+
+    class FireObserver {
+        - smokeDetectorName : String
+        + FireObserver(in smokeDetectorName: String)
+    }
+
+    class BeerCountObserver {
+        - refrigeratorName : String
+        + BeerCountObserver(in refrigeratorName: String)
+    }
+
+    class CommandFactory << (S,#FF7700) Singleton >> {
+        + getCommand(in commandText: String) : Command
+    }
+
+    interface Command {
+        + execute() : String
+    }
+
+    class ApplicationTypeCommand {
+        + ApplicationTypeCommand(in fullyQualifiedRoomName: String,\nin applianceType: String, in statusName: String, in newValue: String)
+    }
+
+    class OccupantRoomCommand {
+        + OccupantRoomCommand(in occupantName: String, in fullyQualifiedRoomName: String, in isEntering: boolean)
+    }
+
+    class OccupantStatusCommand {
+        + OccupantStatusCommand(in occupantName: String, in isActive: boolean)
+    }
+
+    class BeerNotificationCommand {
+        + BeerNotificationCommand(in fullyQualifiedRefrigeratorName: String, in beerCount: int)
+    }
+
+    class FireCommand {
+        + FireCommand(in fullyQualifiedSmokeDetectorName: String)
+    }
+
+    ControllerServiceApi <-- ControllerServiceApiImpl
+    ControllerServiceApiImpl ..> StatusSubject
+    StatusSubject "1" o-- "*" StatusObserver
+    StatusObserver <-- FireObserver
+    StatusObserver <--- BeerCountObserver
+    Command <-- ApplicationTypeCommand
+    Command <--- OccupantRoomCommand
+    Command <--- OccupantStatusCommand
+    Command <--- BeerNotificationCommand
+    Command <-- FireCommand
+    CommandFactory ..> Command
+    ControllerServiceApiImpl ..> CommandFactory
+    OccupantRoomCommand ....> OccupantTracker
+    OccupantStatusCommand ..> OccupantTracker
+    FireObserver ..> FireCommand
+    BeerCountObserver ..> BeerNotificationCommand
+}
+
+package cscie97.asn2.housemate.model {
+    interface ModelServiceApi {
+        + executeCommand(in commandText: String) : String
+    }
+}
+
+package cscie97.asn1.knowledge.engine{
+    class KnowledgeGraph {
+        + importTriple(in subject : String, in predicate String, in object String) : void
+        + executeQuery(in subject : String, in predicate String, in object String) : Set<Triple>
+    }
+
+    class Triple {
+        - subject : Node
+        - predicate : Predicate
+        - object : Node
+    }
+
+    class Node {
+        - identifier : String
+    }
+
+    class Predicate {
+        -identifier : String
+    }
+
+    KnowledgeGraph ..> Triple
+    Triple ..> Node
+    Triple ..> Predicate
+}
+
+Command ..down.....> ModelServiceApi
+OccupantTracker ..> KnowledgeGraph
+
+
+@enduml
+```
