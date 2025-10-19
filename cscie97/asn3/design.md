@@ -161,11 +161,11 @@ top to bottom direction
 
 package cscie97.asn2.housemate.controller {
     interface ControllerServiceApi {
-        + executeControllerCommand(in commandText: String) : String
+        + executeCommand(in commandText: String) : String
         + useModelServiceOutput(in modelServiceOutputText: String) : String
     }
 
-    class ControllerServiceApiImpl {
+    class ControllerServiceApiImpl << (S,#FF7700) Singleton >> {
         
     }
 
@@ -277,6 +277,45 @@ package cscie97.asn1.knowledge.engine{
 Command ..down.....> ModelServiceApi
 OccupantTracker ..> KnowledgeGraph
 
+
+@enduml
+```
+
+TODO Add Description
+
+## Class Dictionary
+TODO
+
+## Implementation Details
+The following diagram shows details of how the Housemate Controller Service executes a command from an Ava device:
+
+```plantuml
+@startuml
+title Using Ava Device to Turn on Lights
+
+autonumber
+scale max 800 width
+
+actor User
+participant TestDriver
+participant ModelServiceApi
+participant ControllerServiceApiImpl
+participant CommandFactory
+participant "ApplicationTypeCommand :\nlightsOnCommand" as ApplicationTypeCommand
+
+User -> TestDriver : main()
+note right
+    Script file name passed in Command Line argument.
+end note
+loop for each creation command
+TestDriver -> ModelServiceApi : executeCommand(commandText)
+TestDriver -> ControllerServiceApiImpl : useModelServiceOutput(modelServiceOutputText)
+end
+TestDriver -> ControllerServiceApiImpl : executeCommand(commandText)
+ControllerServiceApiImpl -> CommandFactory : getCommand(commandText)
+CommandFactory -> ApplicationTypeCommand : ApplicationTypeCommand(\n"house1:kitchen","lights", "power", "ON")
+ApplicationTypeCommand -> ModelServiceApi : executeCommand("set appliance house1:kitchen:overheadLights status power value ON")
+ApplicationTypeCommand -> ModelServiceApi : executeCommand("set appliance house1:kitchen:breakfastBarLights status power value ON")
 
 @enduml
 ```
