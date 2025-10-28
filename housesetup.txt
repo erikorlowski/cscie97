@@ -293,7 +293,7 @@ show  appliance house1:kitchen:oven1_1 status temperature
 show  appliance house1:kitchen:oven1_1  
          
 #        set smoke detector state
-set sensor house1:kitchen:smoke_detector1_1 status fire
+set sensor house1:kitchen:smoke_detector1_1 status fire value active
 
 
 #         show all state for the smoke detector  
@@ -301,7 +301,9 @@ show  sensor house1:kitchen:smoke_detector1_1
 
 
 #        set smoke detector state
-set sensor house1:kitchen:smoke_detector1_1 status fire
+set sensor house1:kitchen:smoke_detector1_1 status fire value inactive
+
+aso;fhdeilskfjv
 
 
 #         show all state for the smoke detector  

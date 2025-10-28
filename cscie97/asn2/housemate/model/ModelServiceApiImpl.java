@@ -2,9 +2,8 @@ package cscie97.asn2.housemate.model;
 
 import cscie97.asn1.knowledge.engine.KnowledgeGraph;
 import cscie97.asn1.knowledge.engine.Triple;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import cscie97.asn3.housemate.controller.StatusObserver;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +17,7 @@ public class ModelServiceApiImpl implements ModelServiceApi {
     private static ModelServiceApiImpl instance = null;
     private Map <String, ModelObject> modelObjects = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     private KnowledgeGraph knowledgeGraph = KnowledgeGraph.getInstance();
+    private final ArrayList<StatusObserver> statusObservers = new ArrayList<>();
 
     private ModelServiceApiImpl() {
         // Private constructor to prevent instantiation
@@ -79,25 +79,24 @@ public class ModelServiceApiImpl implements ModelServiceApi {
     }
 
     /**
-     * Execute a script file by reading each line and passing it to the CommandParser.
+     * Execute a command by reading each line and passing it to the CommandParser.
      *
-     * @param filename path to the script file
+     * @param commandText the command text to execute
      * @param authenticationKey the authentication key for executing commands
-     * @throws IllegalArgumentException if the file cannot be read
+     * @throws IllegalArgumentException if the command cannot be executed
+     *
+     * @return the output of the command execution, or null if it failed
      */
-    public void executeScript(String filename, char[] authenticationKey) {
-        try (BufferedReader br = new BufferedReader(new FileReader(filename, java.nio.charset.StandardCharsets.UTF_8))) {
-            String line;
-            int lineNumber = 1;
-            while ((line = br.readLine()) != null) {
-                CommandParser.getInstance().executeCommand(line, lineNumber);
-                lineNumber++;
-            }
-
-            System.out.println("Script " + filename + " executed successfully.");
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Failed to execute script: " + filename, e);
+    @Override
+    public String executeCommand(String commandText, char[] authenticationKey) {
+        try {
+            String output = CommandParser.getInstance().executeCommand(commandText);
+            return output;
+        } catch (IllegalArgumentException e) {
+            System.out.println(e.getMessage());
+            System.exit(1);
         }
+        return null;
     }
 
     /**
@@ -108,5 +107,30 @@ public class ModelServiceApiImpl implements ModelServiceApi {
      */
     Map<String, ModelObject> getAllModelObjects() {
         return modelObjects;
+    }
+
+    /**
+     * Attach a status observer to the model service.
+     *
+     * @param observer the status observer to attach
+     */
+    @Override
+    public void attachStatusObserver(StatusObserver observer) {
+        statusObservers.add(observer);
+    }
+
+    /**
+     * Notify all attached status observers of a status change.
+     * 
+     * @param device the device name
+     * @param status the status name
+     * @param newValue the new value of the status
+     * @param deviceType the type of the device
+     */
+    @Override
+    public void notifyStatusObservers(String device, String status, String newValue, String deviceType) {
+        for (StatusObserver observer : statusObservers) {
+            observer.onStatusUpdate(device, status, newValue, deviceType);
+        }
     }
 }
