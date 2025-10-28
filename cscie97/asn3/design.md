@@ -162,7 +162,6 @@ top to bottom direction
 package cscie97.asn2.housemate.controller {
     interface ControllerServiceApi {
         + executeCommand(in commandText: String) : String
-        + useModelServiceOutput(in modelServiceOutputText: String) : String
     }
 
     class ControllerServiceApiImpl << (S,#FF7700) Singleton >> {
@@ -177,24 +176,18 @@ package cscie97.asn2.housemate.controller {
         + makeOccupantInactive(in occupantName: String) : void
     }
 
-    class StatusSubject << (S,#FF7700) Singleton >> {
-        - observers : StatusObserver[]
-        + registerObserver(in observer: StatusObserver) : void
-        + notifyObservers() : void
-    }
-
     interface StatusObserver {
         + onStatusUpdate(in device: String, in status: String, in newValue: String) : void
     }
 
     class FireObserver {
-        - smokeDetectorName : String
-        + FireObserver(in smokeDetectorName: String)
     }
 
     class BeerCountObserver {
-        - refrigeratorName : String
-        + BeerCountObserver(in refrigeratorName: String)
+    }
+
+    class OvenDoneObserver {
+
     }
 
     class CommandFactory << (S,#FF7700) Singleton >> {
@@ -206,46 +199,68 @@ package cscie97.asn2.housemate.controller {
     }
 
     class ApplicationTypeCommand {
-        + ApplicationTypeCommand(in fullyQualifiedRoomName: String,\nin applianceType: String, in statusName: String, in newValue: String)
+        - fullyQualifiedContainerName : String
+        - applianceType : String
+        - statusName : String
+        - newValue : String
+        + ApplicationTypeCommand(in fullyQualifiedContainerName: String,\nin applianceType: String, in statusName: String, in newValue: String)
     }
 
     class OccupantRoomCommand {
+        - occupantName : String
+        - fullyQualifiedRoomName : String
+        - isEntering : bool
         + OccupantRoomCommand(in occupantName: String, in fullyQualifiedRoomName: String, in isEntering: boolean)
     }
 
     class OccupantStatusCommand {
+        - occupantName : String
+        - isActive : bool
         + OccupantStatusCommand(in occupantName: String, in isActive: boolean)
     }
 
     class BeerNotificationCommand {
+        - fullyQualifiedRefrigeratorName : String
+        - beerCount : int
         + BeerNotificationCommand(in fullyQualifiedRefrigeratorName: String, in beerCount: int)
     }
 
     class FireCommand {
+        - fullyQualifiedSmokeDetectorName : String
         + FireCommand(in fullyQualifiedSmokeDetectorName: String)
     }
 
+    class OvenDoneCommand {
+        - fullyQualifiedOvenName : String
+        + OvenDoneCommand(in fullyQualifiedOvenName: String)
+    }
+
     ControllerServiceApi <-- ControllerServiceApiImpl
-    ControllerServiceApiImpl ..> StatusSubject
-    StatusSubject "1" o-- "*" StatusObserver
+    ControllerServiceApiImpl "1" o-- "*" StatusObserver
     StatusObserver <-- FireObserver
     StatusObserver <--- BeerCountObserver
+    StatusObserver <-- OvenDoneObserver
     Command <-- ApplicationTypeCommand
     Command <--- OccupantRoomCommand
     Command <--- OccupantStatusCommand
     Command <--- BeerNotificationCommand
     Command <-- FireCommand
+    Command <- OvenDoneCommand
     CommandFactory ..> Command
     ControllerServiceApiImpl ..> CommandFactory
     OccupantRoomCommand ....> OccupantTracker
     OccupantStatusCommand ..> OccupantTracker
     FireObserver ..> FireCommand
     BeerCountObserver ..> BeerNotificationCommand
+    OvenDoneObserver ..> OvenDoneCommand
 }
 
 package cscie97.asn2.housemate.model {
     interface ModelServiceApi {
+        - statusObservers : ArrayList<StatusObserver>
         + executeCommand(in commandText: String) : String
+        + attachStatusObserver(in observer : StatusObserver) : void
+        + notifyStatusObservers(in device: String, in status: String, in newValue: String) : void
     }
 }
 
@@ -276,17 +291,173 @@ package cscie97.asn1.knowledge.engine{
 
 Command ..down.....> ModelServiceApi
 OccupantTracker ..> KnowledgeGraph
+ModelServiceApi "1" o-- "*" StatusObserver
+
 
 
 @enduml
 ```
 
-TODO Add Description
+The ControllerServiceApi is the interface through which the Housemate Controller Service is interacted with. It is implemented by the ControllerServiceApiImpl which provides the top level functionality for the service. The primary way the ControllerServiceApiImpl class performs actions is through the CommandFactory class.
+
+The CommandFactory class is a singleton class that gets a specific command instance based on command text input into its getCommand method.
+
+Other Commands, such as the FireCommand and the BeerNotificationCommand are triggered by actions in the ModelServiceApi. To enable this notification, the observer pattern is used, with a BeerCountObserver and FireObserver registering for specific events.
+
+Commands dealing with Occupants interact with the OccupantTracker singleton class. This class is a wrapper around the KnowledgeGraph, providing an easy way for Commands to gain information about Occupant state.
 
 ## Class Dictionary
-TODO
+### ControllerServiceApi
+The ControllerServiceApi is the public interface that other packages use to interact with the Housemate Controller Service.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| executeCommand | String executeCommand(String commandText) | Executes a command specific to the Housemate Controller Service. The output of the Command is returned. |
+
+### ControllerServiceApiImpl
+The ControllerServiceApiImpl is the concrete implementation of the ControllerServiceApi and provides the implementation of the executeCommand method.
+
+### StatusObserver
+The StatusObserver interface is used to receive updates from the Housemate Model Service when a Device has changed its status. Concrete implementations of this interface look for specific status changes and perform Commands based on these changes.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue) | Receives a status update event from the HousemateModelService. A concrete implementation of this interface can use the arguments of this method to perform meaningful actions. |
+
+### FireObserver
+The FireObserver is a concrete implementation of the StatusObserver interface which looks for smoke detectors indicating a fire.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue) | If the status update is a smoke detector indicating a fire, calls the FireCommand execute method to respond to the fire. |
+
+### BeerCountObserver
+The BeerCountObserver is a concrete implementation of the StatusObserver interface which looks for refrigerators indicating a beer count of less than 3.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue) | If the status update is a refrigerator indicating a beer count of less than 3, prompts the user if they would like to order more beer and places the order if necessary. |
+
+### OvenDoneObserver
+The OvenDoneObserver is a concrete implementation of the StatusObserver interface which looks for ovens indicating a time to cook of 0.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue) | If the status update is an oven indicating a time to cook of 0, turn the oven off and have all Ava devices in the room indicate that food is ready. |
+
+### Command
+The Command interface represents some action that can be taken soon or long after when it is created. Concrete implementations of this interface will use the execute method to perform relevant behaviors for the Housemate Controller Service.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| execute | String execute() | Performs the relevant actions for a specific type of Command. The output of the Command execution is returned. |
+
+### ApplicationTypeCommand
+This is a generic Command that sets the statuses all devices of a given type in a given room or house to a given value.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| ApplicationTypeCommand | ApplicationTypeCommand(String fullyQualifiedContainerName,
+String applianceType, String statusName, String newValue) | Creates a new ApplicationTypeCommand with the provided information. |
+
+__Properties:__
+| Property Name | Type | Description |
+|---|---|---|
+| fullyQualifiedContainerName | String | The fully qualified name of the Room or House. |
+| applianceType | String | The type of Appliance to set statuses for. |
+| statusName | String | The name of the status to set. |
+| newValue | String | The value to set the status to. |
+
+### FireCommand
+This Command performs all the actions necessary to respond to a fire as described in the requirements.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| FireCommand | FireCommand(String fullyQualifiedSmokeDetectorName) | Creates a new FireCommand with the provided information. |
+
+__Properties:__
+| Property Name | Type | Description |
+|---|---|---|
+| fullyQualifiedSmokeDetectorName | String | The fully qualified name of the smoke detector indicating the fire. This can be used to find the house and room of the fire. |
+
+### OvenDoneCommand
+This Command indicates when an oven is done cooking.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| OvenDoneCommand | OvenDoneCommand(String fullyQualifiedOvenName) | Creates a new OvenDoneCommand with the provided information. |
+
+__Properties:__
+| Property Name | Type | Description |
+|---|---|---|
+| fullyQualifiedOvenName | String | The fully qualified name of the oven that is finished cooking. |
+
+### BeerNotificationCommand
+This Command indicates when a refrigerator is low on beer.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| BeerNotificationCommand | BeerNotificationCommand(String fullyQualifiedRefrigeratorName, int beerCount) | Creates a new BeerNotificationCommand with the provided information. |
+
+__Properties:__
+| Property Name | Type | Description |
+|---|---|---|
+| fullyQualifiedRefrigeratorName | String | The fully qualified name of the refrigerator that is low on beer. |
+| beerCount | int | The current amount of beer in the refrigerator. |
+
+### OccupantRoomCommand
+This Command handles an Occupant entering or leaving a Room.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| OccupantRoomCommand | OccupantRoomCommand(String occupantName, String fullyQualifiedRoomName, bool isEntering) | Creates a new OccupantRoomCommand with the provided information. |
+
+__Properties:__
+| Property Name | Type | Description |
+|---|---|---|
+| occupantName | String | The name of the Occupant entering or leaving the Room. |
+| fullyQualifiedRoomName | String | The fully qualified name of the Room the Occupant is entering or leaving. |
+| isEntering | bool | Whether the Occupant is entering or leaving the Room. |
+
+### OccupantStatusCommand
+This Command handles an Occupant entering or leaving a Room.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| OccupantStatusCommand | OccupantStatusCommand(String occupantName, bool isActive) | Creates a new OccupantStatusCommand with the provided information. |
+
+__Properties:__
+| Property Name | Type | Description |
+|---|---|---|
+| occupantName | String | The name of the Occupant to update the status of. |
+| isActive | bool | Whether the Occupant is awake or sleeping. |
+
+### OccupantTracker
+The OccupantTracker is a wrapper around the KnowledgeGraph used to allow Commands to easily gain information about the status of Occupants in the Housemate system.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| addOccupantToRoom | addOccupantToRoom(String occupantName, String fullyQualifiedRoomName) | Adds the Occupant with a given name to the specified Room. |
+| removeOccupantFromRoom | addOccupantToRoom(String occupantName, String fullyQualifiedRoomName) | Removes the Occupant with a given name from the specified Room. If the Occupant was not present, do nothing. |
+| makeOccupantActive | makeOccupantActive(String occupantName) | Marks the specified Occupant as active. |
+| makeOccupantInactive | makeOccupantInactive(String occupantName) | Marks the specified Occupant as inactive. |
 
 ## Implementation Details
+Further details about the implementation of the Housemate Controller Service can be seen in the sequence diagrams below.
+
 The following diagram shows details of how the Housemate Controller Service executes a command from an Ava device:
 
 ```plantuml
@@ -309,7 +480,6 @@ note right
 end note
 loop for each creation command
 TestDriver -> ModelServiceApi : executeCommand(commandText)
-TestDriver -> ControllerServiceApiImpl : useModelServiceOutput(modelServiceOutputText)
 end
 TestDriver -> ControllerServiceApiImpl : executeCommand(commandText)
 ControllerServiceApiImpl -> CommandFactory : getCommand(commandText)
@@ -319,3 +489,37 @@ ApplicationTypeCommand -> ModelServiceApi : executeCommand("set appliance house1
 
 @enduml
 ```
+
+Here, a number of commands are executed by the Housemate Model Service to create and configure objects. Eventually, an Ava voice command such as __(3)__ will be received by the Controller Service. From here, the Controller Service classifies the command, interprets its details and uses the Model Service to perform relevant actions.
+
+A different sequence is seen when the Controller Service must respond to status changes on Devices inside the Housemate Model Service. This sequence is shown below:
+
+```plantuml
+@startuml
+title Responding to Fire
+
+autonumber
+scale max 800 width
+
+actor User
+participant TestDriver
+participant ModelServiceApi
+participant "FireCommand :\nfireCommand" as FireCommand
+
+User -> TestDriver : main()
+note right
+    Script file name passed in Command Line argument.
+end note
+FireObserver -> ModelServiceApi : attachStatusOberver()
+loop for each creation command
+    TestDriver -> ModelServiceApi : executeCommand(commandText)
+end
+ModelServiceApi -> ModelServiceApi : notifyStatusObservers("house1:room1:fireDetector", "fire", "active")
+ModelServiceApi -> FireObserver : onStatusUpdate("house1:room1:fireDetector", "fire", "active")
+FireObserver -> FireCommand : FireCommand("house1:room1:fireDetector")
+FireCommand -> ModelServiceApi : Perform actions for fire.
+
+@enduml
+```
+
+Responding to a fire relies on using the observer pattern to alert the Controller Service when a fire has occurred. Once a fire occurs, the business logic for handling the fire is the responsibility of the FireCommand class. The FireCommand class then delegates specific actions to the ModelServiceApi class.
