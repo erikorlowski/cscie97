@@ -303,8 +303,6 @@ show  sensor house1:kitchen:smoke_detector1_1
 #        set smoke detector state
 set sensor house1:kitchen:smoke_detector1_1 status fire value inactive
 
-aso;fhdeilskfjv
-
 
 #         show all state for the smoke detector  
 show  sensor house1:kitchen:smoke_detector1_1 
