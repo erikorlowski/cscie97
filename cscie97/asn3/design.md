@@ -107,10 +107,6 @@ repeat :TestDriver Interprets Line;
             stop
         endif
         :Housemate Model Service Executes Command;
-        #Pink:if (Smoke Detector or Refrigerator Created) then (yes)
-            #Pink:Register Status Observer;
-        else (no)
-        endif
         #Pink:if (Device Status Change) then (yes)
             #Pink:Notify Status Observers;
         else (no)
@@ -523,3 +519,15 @@ FireCommand -> ModelServiceApi : Perform actions for fire.
 ```
 
 Responding to a fire relies on using the observer pattern to alert the Controller Service when a fire has occurred. Once a fire occurs, the business logic for handling the fire is the responsibility of the FireCommand class. The FireCommand class then delegates specific actions to the ModelServiceApi class.
+
+## Exception Handling
+There are two types of exceptions that could occur in the Housemate Controller Service.
+
+One type of exception would be if a command was formatted improperly or otherwise could not be parsed.
+
+This type of exception is handled by an __InvalidCommandException__. The properties of this exception are the command text and a message indicating the problem with the command text.
+
+Another type of exception occurs when an object in the Housemate Model Service is referenced that cannot be found. This type of exception is handled by an __ObjectNotFoundException__. The properties of this exception are the command text and the specified name of the object that could not be found.
+
+## Risks
+The current implementation of the observer pattern could send many updates to the controller service on sensor updates which are not needed. This could potentially increase processor load and make the system less responsive. Because there is nothing in this system that is time critical in intervals of less than seconds, this is likely an acceptable risk.
