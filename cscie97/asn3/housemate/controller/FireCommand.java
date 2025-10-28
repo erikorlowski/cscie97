@@ -11,6 +11,8 @@ public class FireCommand implements Command {
 
     @Override
     public String execute() {
+        StringBuilder sb = new StringBuilder();
+
         int firstColon = fullyQualifiedSmokeDetectorName.indexOf(':');
         String house = firstColon != -1 ? fullyQualifiedSmokeDetectorName.substring(0, firstColon) : "";
         int secondColon = firstColon == -1 ? -1 : fullyQualifiedSmokeDetectorName.indexOf(':', firstColon + 1);
@@ -21,12 +23,12 @@ public class FireCommand implements Command {
         boolean occupantsPresent = !OccupantTracker.getInstance().getOccupantsInHouse(house).isEmpty();
         if (occupantsPresent) {
             setAvaAlerts(house, room);
-            ApplicationTypeCommand turnOffLightsCmd = new ApplicationTypeCommand(house, "light", "power", "OFF");
-            turnOffLightsCmd.execute();
+            ApplicationTypeCommand turnOnLightsCmd = new ApplicationTypeCommand(house, "light", "power", "ON");
+            sb.append(turnOnLightsCmd.execute()).append("\n");
         }
 
-
-        return String.format("Fire detected at %s calling 911!", fullyQualifiedSmokeDetectorName);
+        sb.append(String.format("Fire detected at %s calling 911!", fullyQualifiedSmokeDetectorName));
+        return sb.toString();
     }
 
     /**
@@ -83,6 +85,7 @@ public class FireCommand implements Command {
                         : "Fire in the " + originatingRoom + ". Please evacuate immediately.";
 
                     ApplicationTypeCommand avaCmd = new ApplicationTypeCommand(originatingHouse + ":" + roomName, "ava", "Text to Speech", escapeMessage);
+                    System.out.println(avaCmd.execute());
                 }
             }
         } catch (java.io.IOException e) {

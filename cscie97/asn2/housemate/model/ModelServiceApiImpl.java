@@ -130,7 +130,16 @@ public class ModelServiceApiImpl implements ModelServiceApi {
     @Override
     public void notifyStatusObservers(String device, String status, String newValue, String deviceType) {
         for (StatusObserver observer : statusObservers) {
-            observer.onStatusUpdate(device, status, newValue, deviceType);
+            observer.onStatusUpdate(modelFullyQualifiedNameToControllerFullyQualifiedName(device), 
+                status, newValue, deviceType);
         }
+    }
+
+    private String modelFullyQualifiedNameToControllerFullyQualifiedName(String modelFQN) {
+        if (modelFQN == null) {
+            return null;
+        }
+        // Remove any occurrences of the specified prefixes (case-insensitive)
+        return modelFQN.replaceAll("(?i)(house_|room_|device_|sensor_|appliace_)", "");
     }
 }

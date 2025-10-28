@@ -61,6 +61,7 @@ abstract class Device implements ModelObject {
      */
     public void setStatus(String statusName, String statusValue) {
         statuses.put(statusName, statusValue);
+
         ModelServiceApiImpl.getInstance().notifyStatusObservers(fullyQualifiedName, statusName, statusValue, type);
     }
 
