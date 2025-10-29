@@ -9,39 +9,41 @@ The document captures the requirements, design and test plan for the Housemate C
 ## Overview
 The Housemate Controller Service receives input on the state of objects from the Housemate Model Service. Based on a defined set of rules, the Housemate Controller Service uses the state of objects in the Housemate Model Service to perform certain actions, again, utilizing the Housemate Model Service. The Housemate Controller Service also tracks the location of Occupants using a KnowledgeMap and uses this information to perform actions on the Housemate Model Service.
 
+This document includes the requirements for the Housemate Controller Service which describe the rules that are implemented by the service. The document includes use cases for the service, as well as implementation details including an activity diagram, class diagram, class dictionary and sequence diagram. Finally, the document includes information on exception handling, testing and risks.
+
 ## Requirements
 __Requirement: Rule Execution Logging__
-All rule executions and resulting actions shalled by logged.
+All rule executions and resulting actions shall be output to the user.
 
 ### Rules
 This section defines the rules for specific behaviors of the Housemate Controller Service. In each case, when the given stimulus occurs, the states action shall be taken.
 
-When text is given in parentheses in the stimulus column, this is the exact text that will be passed to the CLI for stimuli that don't directly map to the Housemate Model Service.
+When text is given in parentheses in the stimulus column.
 
 __Requirement: Exception Handling__
-When one of the rules below cannot be executed, either because it is specified with incorrect syntax or because a referenced object cannot be found, script execution shall be stopped and the invalid command shall not be executed.
+When one of the rules below cannot be executed, either because it is specified with incorrect syntax or because a referenced object cannot be found, script execution shall continue and the specific command shall not execute.
 
 __Requirement: Ava Device Rules__
 The following rules shall be enforced when stimuli of a voice command in the specified form is encountered on a Device with the type of "Ava":
 
 | Stimulus | Action |
 |-|-|
-| open door (ava <full_qualified_ava_name> open door) | Sets the "open" status of all Devices of type "door" to in the same Room as the Ava Device to "opened". |
-| close door (ava <full_qualified_ava_name> close door) | Sets the "open" status of all Devices of type "door" in the same Room as the Ava Device to "closed". |
-| lights off (ava <full_qualified_ava_name> lights off) | Sets the "power" status of all Devices of type "light" in the same Room as the Ava Device to "ON". |
-| lights on (ava <full_qualified_ava_name> lights on) | Sets the "power" status of all Devices of type "light" in the same Room as the Ava Device to "ON". |
-| <appliance_type> <status_name> <value> (ava <room_fully_qualified_name> type <appliance_type> status <status_name> value <value>) | Sets the given status of all Devices of the specified type in the same Room as the Ava Device to the specified value. |
-| where is <occupant_name> (ava where is <occupant_name>) | Return a response in the form of "<occupant_name> is_located_in <room_name>". |
+| Ava type device receives a 'voice_in' status with a value of "open door" | Sets the "open" status of all Devices of type "door" to in the same Room as the Ava Device to "opened". |
+| Ava type device receives a 'voice_in' status with a value of "close door" | Sets the "open" status of all Devices of type "door" in the same Room as the Ava Device to "closed". |
+| Ava type device receives a 'voice_in' status with a value of "lights off" | Sets the "power" status of all Devices of type "light" in the same Room as the Ava Device to "ON". |
+| Ava type device receives a 'voice_in' status with a value of "lights on" | Sets the "power" status of all Devices of type "light" in the same Room as the Ava Device to "ON". |
+| Ava type device receives a 'voice_in' status with a value in the form of "<appliance_type> <status_name> <value> | Sets the given status of all Devices of the specified type in the same Room as the Ava Device to the specified value. |
+| Ava type device receives a 'voice_in' status with a value in the form of "where is <occupant_name> | Return a response in the form of "<occupant_name> is_located_in <room_name>". |
 
 __Requirement: Camera Rules__
 The following rules shall be enforced when the described action is detected by a Device of type "Camera":
 
 | Stimulus | Action |
 |-|-|
-| Occupant Detected (occupant <occupant_name> in_room <room_fully_qualified_name>) | Sets the "power" status of all Devices of type "light" in the Room to "ON". Sets the "setpoint" status of all Devices of type "thermostat" in the Room to 2 degrees warmer if this is the only Occupant in the Room. Update the location of the Occupant with the current Room. |
-| Occupant Leaving (occupant <occupant_name> leaving_room <room_fully_qualified_name>) | Sets the "power" status of all Devices of type "light" in the Room to "OFF". Sets the "setpoint" status of all Devices of type "thermostat" in the Room to 2 degrees cooler if there are no more Occupants remaining in the Room. Update the location of the Occupant. |
-| Occupant Inactive (occupant <occupant_name> inactive) | Tracks that the Occupant is sleeping. |
-| Occupant Active (occupant <occupant_name> active) | Tracks that the Occupant is awake. |
+| Device of type camera receives a status of "occupant_detected" with a value of the occupant name. | Sets the "power" status of all Devices of type "light" in the Room to "ON". Sets the "setpoint" status of all Devices of type "thermostat" in the Room to 2 degrees warmer if this is the only Occupant in the Room. Update the location of the Occupant with the current Room. |
+| Device of type camera receives a status of "occupant_leaving" with a value of the occupant name. | Sets the "power" status of all Devices of type "light" in the Room to "OFF". Sets the "setpoint" status of all Devices of type "thermostat" in the Room to 2 degrees cooler if there are no more Occupants remaining in the Room. Update the location of the Occupant. |
+| Device of type camera receives a status of "occupant_sleeping" with a value of the occupant name. | Tracks that the Occupant is sleeping. |
+| Device of type camera receives a status of "occupant_waking" with a value of the occupant name. | Tracks that the Occupant is awake. |
 
 __Requirement: Smoke Detector Rule__
 The following rule shall be enforced when the described action is detected by a Device of type "SmokeDetector":
@@ -101,7 +103,6 @@ Activities colored in pink are the responsibility of the Housemate Controller Se
 start
 :Command Script Entered;
 repeat :TestDriver Interprets Line;
-    if (Line Is Model Service Command) then (yes)
         if (Error) then
             :Display Error Message;
             stop
@@ -109,42 +110,19 @@ repeat :TestDriver Interprets Line;
         :Housemate Model Service Executes Command;
         #Pink:if (Device Status Change) then (yes)
             #Pink:Notify Status Observers;
+            #Pink:Perform Command From Rule;
+            :Model Service Executes Result of Rule;
         else (no)
         endif
-        #Pink:if (Occupant Defined) then (yes)
-            #Pink:Set Occupant Location to Unknown;
-        else (no)
-        endif
-    elseif (Line is Controller Service Command) then (yes)
-        #Pink:if (Error) then
-            #Pink:Display Error Message;
-            stop
-        endif
-        #Pink:CommandFactory Chooses Correct Command Class;
-        #Pink:Command is Created;
-        #Pink:Command is Executed;
-        :Housemate Model Service Responds to API Call(s);
-    else (no)
-        :Display Error Message;
-        stop
-    endif
 repeat while (Last Line?) is (no)
 ->yes;
 stop
 @enduml
 ```
 
-When a command is run by the Housemate Model Service, the output of that command is then sent to the Housemate Controller Service to process it.
+When a command is run by the Housemate Model Service, any devices status changes are sent to the Housemate Controller Service to be processed. The Housemate Controller Service then reacts to this change and takes any appropriate action through a Command.
 
-If a Smoke Detector or Refrigerator are created, then they must register to observe status changes in order to respond to fires or changes in the beer counts respectively.
-
-If a Device status changes, then all registered observers are notified with details of the new status and these observers can decide if a Command needs to be executed in response to the new status.
-
-If an Occupant is defined, the Housemate Controller Service's KnowledgeGraph needs to be updated with the new Occupant and an unknown location.
-
-When a command is run directly by the Housemate Controller Service, first, the command is validated. If the line is validated, the type of Command class is classified. Then, the Command is Executed.
-
-Many Command executions require calling the Housemate Model Service API to make necessary updates to Model Objects.
+When a Command is executed, the Controller Service will handle the business logic of the Command and delegate the execution of any changes to model objects as a result of the Command to the Model Service.
 
 ## Class Diagram
 The class diagram for the Housemate Controller Service is shown below.
@@ -157,11 +135,10 @@ top to bottom direction
 
 package cscie97.asn2.housemate.controller {
     interface ControllerServiceApi {
-        + executeCommand(in commandText: String) : String
     }
 
-    class ControllerServiceApiImpl << (S,#FF7700) Singleton >> {
-        
+    class ControllerServiceApi << (S,#FF7700) Singleton >> {
+        + initialize() : void
     }
 
     class OccupantTracker << (S,#FF7700) Singleton >> {
@@ -170,10 +147,13 @@ package cscie97.asn2.housemate.controller {
         + removeOccupantFromRoom(in occupantName: String, in fullyQualifiedRoomName: String) : void
         + makeOccupantActive(in occupantName: String) : void
         + makeOccupantInactive(in occupantName: String) : void
+        + getOccupantsInRoom(in fullyQualifiedRoomName: String) : Set<String>
+        + getOccupantsInHouse(in houseName: String) : Set<String>
+        + getOccupantLocation(in occupantName: String) : String
     }
 
     interface StatusObserver {
-        + onStatusUpdate(in device: String, in status: String, in newValue: String) : void
+        + onStatusUpdate(in device: String, in status: String, in newValue: String, in deviceType: String) : void
     }
 
     class FireObserver {
@@ -186,20 +166,24 @@ package cscie97.asn2.housemate.controller {
 
     }
 
-    class CommandFactory << (S,#FF7700) Singleton >> {
-        + getCommand(in commandText: String) : Command
+    class AvaObserver {
+
+    }
+
+    class CameraObserver {
+
     }
 
     interface Command {
         + execute() : String
     }
 
-    class ApplicationTypeCommand {
+    class ApplianceTypeCommand {
         - fullyQualifiedContainerName : String
         - applianceType : String
         - statusName : String
         - newValue : String
-        + ApplicationTypeCommand(in fullyQualifiedContainerName: String,\nin applianceType: String, in statusName: String, in newValue: String)
+        + ApplianceTypeCommand(in fullyQualifiedContainerName: String,\nin applianceType: String, in statusName: String, in newValue: String)
     }
 
     class OccupantRoomCommand {
@@ -231,24 +215,26 @@ package cscie97.asn2.housemate.controller {
         + OvenDoneCommand(in fullyQualifiedOvenName: String)
     }
 
-    ControllerServiceApi <-- ControllerServiceApiImpl
-    ControllerServiceApiImpl "1" o-- "*" StatusObserver
+    ControllerServiceApi "1" o-- "*" StatusObserver
     StatusObserver <-- FireObserver
     StatusObserver <--- BeerCountObserver
     StatusObserver <-- OvenDoneObserver
-    Command <-- ApplicationTypeCommand
+    StatusObserver <-- AvaObserver
+    StatusObserver <-- CameraObserver
+    Command <-- ApplianceTypeCommand
     Command <--- OccupantRoomCommand
     Command <--- OccupantStatusCommand
     Command <--- BeerNotificationCommand
     Command <-- FireCommand
     Command <- OvenDoneCommand
-    CommandFactory ..> Command
-    ControllerServiceApiImpl ..> CommandFactory
     OccupantRoomCommand ....> OccupantTracker
     OccupantStatusCommand ..> OccupantTracker
     FireObserver ..> FireCommand
     BeerCountObserver ..> BeerNotificationCommand
     OvenDoneObserver ..> OvenDoneCommand
+    AvaObserver ..> ApplianceTypeCommand
+    CameraObserver ..> OccupantStatusCommand
+    CameraObserver ..> OccupantRoomCommand
 }
 
 package cscie97.asn2.housemate.model {
@@ -256,7 +242,7 @@ package cscie97.asn2.housemate.model {
         - statusObservers : ArrayList<StatusObserver>
         + executeCommand(in commandText: String) : String
         + attachStatusObserver(in observer : StatusObserver) : void
-        + notifyStatusObservers(in device: String, in status: String, in newValue: String) : void
+        + notifyStatusObservers(in device: String, in status: String, in newValue: String, in deviceType: String) : void
     }
 }
 
@@ -264,6 +250,7 @@ package cscie97.asn1.knowledge.engine{
     class KnowledgeGraph {
         + importTriple(in subject : String, in predicate String, in object String) : void
         + executeQuery(in subject : String, in predicate String, in object String) : Set<Triple>
+        + removeTriplesBySubjectAndPredicate(in subject : String, in predicate : String) : void
     }
 
     class Triple {
@@ -294,25 +281,20 @@ ModelServiceApi "1" o-- "*" StatusObserver
 @enduml
 ```
 
-The ControllerServiceApi is the interface through which the Housemate Controller Service is interacted with. It is implemented by the ControllerServiceApiImpl which provides the top level functionality for the service. The primary way the ControllerServiceApiImpl class performs actions is through the CommandFactory class.
+The ControllerServiceApi is the top level class of the Controller Service. The ControllerServiceApi is called to register StatusObserver objects which will be notified by the Housemate Model Service to implement the functionality of the Controller Service.
 
-The CommandFactory class is a singleton class that gets a specific command instance based on command text input into its getCommand method.
-
-Other Commands, such as the FireCommand and the BeerNotificationCommand are triggered by actions in the ModelServiceApi. To enable this notification, the observer pattern is used, with a BeerCountObserver and FireObserver registering for specific events.
+When StatusObservers are notified, they will call on Commands to execute specific business logic based on the stimulus. The Commands can then call on the Model Service to make changes to specific objects in the Housemate Model Service.
 
 Commands dealing with Occupants interact with the OccupantTracker singleton class. This class is a wrapper around the KnowledgeGraph, providing an easy way for Commands to gain information about Occupant state.
 
 ## Class Dictionary
 ### ControllerServiceApi
-The ControllerServiceApi is the public interface that other packages use to interact with the Housemate Controller Service.
+The ControllerServiceApi is the top level class of the Housemate Controller Service with the responsibility for registering the StatusObservers that will in turn, respond to changes in the Housemate Model Service and act appropriately.
 
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| executeCommand | String executeCommand(String commandText) | Executes a command specific to the Housemate Controller Service. The output of the Command is returned. |
-
-### ControllerServiceApiImpl
-The ControllerServiceApiImpl is the concrete implementation of the ControllerServiceApi and provides the implementation of the executeCommand method.
+| initialize | void initialize() | Registers all needed StatusObservers with the Model Service. |
 
 ### StatusObserver
 The StatusObserver interface is used to receive updates from the Housemate Model Service when a Device has changed its status. Concrete implementations of this interface look for specific status changes and perform Commands based on these changes.
@@ -320,7 +302,7 @@ The StatusObserver interface is used to receive updates from the Housemate Model
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue) | Receives a status update event from the HousemateModelService. A concrete implementation of this interface can use the arguments of this method to perform meaningful actions. |
+| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue, String deviceType) | Receives a status update event from the HousemateModelService. A concrete implementation of this interface can use the arguments of this method to perform meaningful actions. |
 
 ### FireObserver
 The FireObserver is a concrete implementation of the StatusObserver interface which looks for smoke detectors indicating a fire.
@@ -328,7 +310,7 @@ The FireObserver is a concrete implementation of the StatusObserver interface wh
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue) | If the status update is a smoke detector indicating a fire, calls the FireCommand execute method to respond to the fire. |
+| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue, String deviceType) | If the status update is a smoke detector indicating a fire, calls the FireCommand execute method to respond to the fire. |
 
 ### BeerCountObserver
 The BeerCountObserver is a concrete implementation of the StatusObserver interface which looks for refrigerators indicating a beer count of less than 3.
@@ -336,7 +318,7 @@ The BeerCountObserver is a concrete implementation of the StatusObserver interfa
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue) | If the status update is a refrigerator indicating a beer count of less than 3, prompts the user if they would like to order more beer and places the order if necessary. |
+| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue, String deviceType) | If the status update is a refrigerator indicating a beer count of less than 3, prompts the user if they would like to order more beer and places the order if necessary. |
 
 ### OvenDoneObserver
 The OvenDoneObserver is a concrete implementation of the StatusObserver interface which looks for ovens indicating a time to cook of 0.
@@ -344,7 +326,23 @@ The OvenDoneObserver is a concrete implementation of the StatusObserver interfac
 __Methods:__
 | Method Name | Signature | Description |
 |---|---|---|
-| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue) | If the status update is an oven indicating a time to cook of 0, turn the oven off and have all Ava devices in the room indicate that food is ready. |
+| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue, String deviceType) | If the status update is an oven indicating a time to cook of 0, turn the oven off and have all Ava devices in the room indicate that food is ready. |
+
+### AvaObserver
+The AvaObserver is a concrete implementation of the StatusObserver interface which looks for specific voice commands to an Ava device.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue, String deviceType) | If the status update is for a recognized Ava Command, the relevant command(s) are executed. |
+
+### CameraObserver
+The CameraObserver is a concrete implementation of the StatusObserver interface which looks Occupant related stimuli from the camera.
+
+__Methods:__
+| Method Name | Signature | Description |
+|---|---|---|
+| onStatusUpdate | void onStatusUpdate(String device, String status, String newValue, String deviceType) | If the status update is for a recognized Occupant transition, calls the appropriate Commands to perform business logic on the transition. |
 
 ### Command
 The Command interface represents some action that can be taken soon or long after when it is created. Concrete implementations of this interface will use the execute method to perform relevant behaviors for the Housemate Controller Service.
@@ -450,45 +448,15 @@ __Methods:__
 | removeOccupantFromRoom | addOccupantToRoom(String occupantName, String fullyQualifiedRoomName) | Removes the Occupant with a given name from the specified Room. If the Occupant was not present, do nothing. |
 | makeOccupantActive | makeOccupantActive(String occupantName) | Marks the specified Occupant as active. |
 | makeOccupantInactive | makeOccupantInactive(String occupantName) | Marks the specified Occupant as inactive. |
+| getOccupantsInRoom | Set<String> getOccupantsInRoom(String fullyQualifiedRoomName) | Returns the Occupants known to be in a given Room. |
+| getOccupantsInHouse | Set<String> getOccupantsInHouse(String houseName) | Returns the Occupants known to be in a given House. |
+| getOccupantLocation | String getOccupantLocation(String occupantName) | Returns the fully qualified Room name the Occupant is known to be in or "unknown" if the Occupant location is not known. |
+
 
 ## Implementation Details
-Further details about the implementation of the Housemate Controller Service can be seen in the sequence diagrams below.
+Further details about the implementation of the Housemate Controller Service can be seen in the sequence diagram below.
 
-The following diagram shows details of how the Housemate Controller Service executes a command from an Ava device:
-
-```plantuml
-@startuml
-title Using Ava Device to Turn on Lights
-
-autonumber
-scale max 800 width
-
-actor User
-participant TestDriver
-participant ModelServiceApi
-participant ControllerServiceApiImpl
-participant CommandFactory
-participant "ApplicationTypeCommand :\nlightsOnCommand" as ApplicationTypeCommand
-
-User -> TestDriver : main()
-note right
-    Script file name passed in Command Line argument.
-end note
-loop for each creation command
-TestDriver -> ModelServiceApi : executeCommand(commandText)
-end
-TestDriver -> ControllerServiceApiImpl : executeCommand(commandText)
-ControllerServiceApiImpl -> CommandFactory : getCommand(commandText)
-CommandFactory -> ApplicationTypeCommand : ApplicationTypeCommand(\n"house1:kitchen","lights", "power", "ON")
-ApplicationTypeCommand -> ModelServiceApi : executeCommand("set appliance house1:kitchen:overheadLights status power value ON")
-ApplicationTypeCommand -> ModelServiceApi : executeCommand("set appliance house1:kitchen:breakfastBarLights status power value ON")
-
-@enduml
-```
-
-Here, a number of commands are executed by the Housemate Model Service to create and configure objects. Eventually, an Ava voice command such as __(3)__ will be received by the Controller Service. From here, the Controller Service classifies the command, interprets its details and uses the Model Service to perform relevant actions.
-
-A different sequence is seen when the Controller Service must respond to status changes on Devices inside the Housemate Model Service. This sequence is shown below:
+This sequence diagram represents the Controller Service responding to a detected fire.
 
 ```plantuml
 @startuml
@@ -499,26 +467,33 @@ scale max 800 width
 
 actor User
 participant TestDriver
+participant ControllerServiceApi
 participant ModelServiceApi
+participant "ApplianceTypeCommand :\nlightsOnCommand" as LightsCmd
+participant "ApplianceTypeCommand :\navaCommand" as AvaCmd
 participant "FireCommand :\nfireCommand" as FireCommand
 
 User -> TestDriver : main()
 note right
     Script file name passed in Command Line argument.
 end note
-FireObserver -> ModelServiceApi : attachStatusOberver()
+TestDriver -> ControllerServiceApi : initialize()
+ControllerServiceApi -> ModelServiceApi : attachStatusOberver()
 loop for each creation command
     TestDriver -> ModelServiceApi : executeCommand(commandText)
 end
 ModelServiceApi -> ModelServiceApi : notifyStatusObservers("house1:room1:fireDetector", "fire", "active")
 ModelServiceApi -> FireObserver : onStatusUpdate("house1:room1:fireDetector", "fire", "active")
-FireObserver -> FireCommand : FireCommand("house1:room1:fireDetector")
-FireCommand -> ModelServiceApi : Perform actions for fire.
+FireObserver -> FireCommand : execute()
+FireCommand -> LightsCmd : execute()
+LightsCmd -> ModelServiceApi : executeCommand()
+FireCommand -> AvaCmd : execute()
+AvaCmd -> ModelServiceApi : executeCommand()
 
 @enduml
 ```
 
-Responding to a fire relies on using the observer pattern to alert the Controller Service when a fire has occurred. Once a fire occurs, the business logic for handling the fire is the responsibility of the FireCommand class. The FireCommand class then delegates specific actions to the ModelServiceApi class.
+Responding to a fire relies on using the observer pattern to alert the Controller Service when a fire has occurred. Once a fire occurs, the business logic for handling the fire is the responsibility of the FireCommand class. The FireCommand class then delegates specific actions other Commands in the Controller Service, which in turn delegate to the ModelServiceApi to execute make changes to individual objects.
 
 ## Exception Handling
 There are two types of exceptions that could occur in the Housemate Controller Service.
@@ -528,6 +503,14 @@ One type of exception would be if a command was formatted improperly or otherwis
 This type of exception is handled by an __InvalidCommandException__. The properties of this exception are the command text and a message indicating the problem with the command text.
 
 Another type of exception occurs when an object in the Housemate Model Service is referenced that cannot be found. This type of exception is handled by an __ObjectNotFoundException__. The only property of this exception is the specified name of the object that could not be found.
+
+## Test Strategy
+The following items shall be included in the testing of the Housemate Controller Service:
+* A fire including rooms for which window evacuation is and isn't necessary.
+* Beer count changes including beer counts where notifying the user is and isn't necessary.
+* Oven timeout changes.
+* An Occupant entering a Room.
+* An Occupant leaving a Room.
 
 ## Risks
 The current implementation of the observer pattern could send many updates to the controller service on sensor updates which are not needed. This could potentially increase processor load and make the system less responsive. Because there is nothing in this system that is time critical in intervals of less than seconds, this is likely an acceptable risk.
