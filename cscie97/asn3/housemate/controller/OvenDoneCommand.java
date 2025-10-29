@@ -40,7 +40,7 @@ public class OvenDoneCommand implements Command {
         String houseName = (colonIndex == -1) ? fullyQualifiedOvenName : fullyQualifiedOvenName.substring(0, colonIndex);
         
         ApplicationTypeCommand avaCmd = new ApplicationTypeCommand(houseName, "ava", "Text to Speech", "Food is ready.");
-        avaCmd.execute();
+        System.out.println(avaCmd.execute());
 
         return String.format("Oven %s is done", fullyQualifiedOvenName);
     }

@@ -41,3 +41,6 @@ set appliance House1:Kitchen:refrigerator status beer_count value 2
 
 set appliance House1:Kitchen:refrigerator status beer_count value -1
 
+define appliance oven type oven room House1:Kitchen energy-use 23
+
+set appliance House1:Kitchen:oven status TimeToCook value 0
