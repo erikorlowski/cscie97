@@ -51,9 +51,16 @@ public class OccupantTracker {
      */
     public void removeOccupantFromRoom(String occupantName, String fullyQualifiedRoomName) {
         if (occupantName == null) return;
+        
+        String houseName;
+        int colonIndex = fullyQualifiedRoomName.indexOf(':');
+        houseName = (colonIndex >= 0) ? fullyQualifiedRoomName.substring(0, colonIndex) : fullyQualifiedRoomName;
+
         // KnowledgeGraph has no remove API; mark as unknown location instead.
-        occupantKnowledgeGraph.importTriple(occupantName, "is_located_in_room", "unknown");
-        occupantKnowledgeGraph.importTriple(occupantName, "is_located_in_house", "unknown");
+        // occupantKnowledgeGraph.importTriple(occupantName, "is_located_in_room", "unknown");
+        // occupantKnowledgeGraph.importTriple(occupantName, "is_located_in_house", "unknown");
+        occupantKnowledgeGraph.removeTriplesBySubjectAndPredicate(occupantName, "is_located_in_room");
+        occupantKnowledgeGraph.removeTriplesBySubjectAndPredicate(occupantName, "is_located_in_house");
     }
 
     /**
@@ -100,6 +107,7 @@ public class OccupantTracker {
      * @return A set of occupant names.
      */
     public Set<String> getOccupantsInRoom(String roomName) {
+        System.out.println("Getting occupants in room: " + roomName);
         Set<String> occupants = new HashSet<>();
         if (roomName == null) return occupants;
 
@@ -109,6 +117,7 @@ public class OccupantTracker {
                 occupants.add(triple.getSubject().getIdentifier());
             }
         }
+        System.out.println("Occupants in room " + roomName + ": " + occupants);
         return occupants;
     }
 

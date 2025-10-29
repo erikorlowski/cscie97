@@ -1,5 +1,7 @@
 package cscie97.asn1.knowledge.engine;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -122,4 +124,114 @@ public class KnowledgeGraph {
         Set<Triple> querySet = queryMapSet.get(identifier);
         querySet.add(triple);
     }
+
+    /**
+     * Remove a single Triple from the internal maps and query sets.
+     * This updates tripleMap and removes the triple from any query set that
+     * referenced it. Empty query sets are removed.
+     *
+     * @param triple the Triple to remove
+     */
+    private void removeTriple(Triple triple) {
+        if (triple == null) return;
+        // remove from tripleMap
+        tripleMap.remove(triple.getIdentifier());
+
+        // remove from all query sets; collect empty keys to remove afterwards
+        List<String> emptyKeys = new ArrayList<>();
+        for (Map.Entry<String, Set<Triple>> e : queryMapSet.entrySet()) {
+            Set<Triple> set = e.getValue();
+            if (set.remove(triple)) {
+                if (set.isEmpty()) {
+                    emptyKeys.add(e.getKey());
+                }
+            }
+        }
+        for (String k : emptyKeys) {
+            queryMapSet.remove(k);
+        }
+    }
+
+    /**
+     * Remove all triples that match the given subject identifier and predicate identifier.
+     * Matching is case-insensitive.
+     *
+     * @param subject the subject identifier to match (not null)
+     * @param predicate the predicate identifier to match (not null)
+     */
+    public void removeTriplesBySubjectAndPredicate(String subject, String predicate) {
+        if (subject == null || predicate == null) return;
+        List<Triple> toRemove = new ArrayList<>();
+        for (Triple t : tripleMap.values()) {
+            if (t.getSubject().getIdentifier().equalsIgnoreCase(subject)
+                    && t.getPredicate().getIdentifier().equalsIgnoreCase(predicate)) {
+                toRemove.add(t);
+            }
+        }
+        for (Triple t : toRemove) {
+            removeTriple(t);
+        }
+        // cleanup nodes/predicates that are no longer referenced
+        cleanupNodeIfUnused(subject);
+        cleanupPredicateIfUnused(predicate);
+    }
+
+    /**
+     * Remove all triples that mention the given subject (either as subject or object).
+     * Matching is case-insensitive.
+     *
+     * @param subject the subject identifier to remove
+     */
+    public void removeAllMentionsOfSubject(String subject) {
+        if (subject == null) return;
+        List<Triple> toRemove = new ArrayList<>();
+        for (Triple t : tripleMap.values()) {
+            if (t.getSubject().getIdentifier().equalsIgnoreCase(subject)
+                    || t.getObject().getIdentifier().equalsIgnoreCase(subject)) {
+                toRemove.add(t);
+            }
+        }
+        for (Triple t : toRemove) removeTriple(t);
+        cleanupNodeIfUnused(subject);
+    }
+
+    /**
+     * Remove all triples that mention the given predicate.
+     * Matching is case-insensitive.
+     *
+     * @param predicate the predicate identifier to remove
+     */
+    public void removeAllMentionsOfPredicate(String predicate) {
+        if (predicate == null) return;
+        List<Triple> toRemove = new ArrayList<>();
+        for (Triple t : tripleMap.values()) {
+            if (t.getPredicate().getIdentifier().equalsIgnoreCase(predicate)) {
+                toRemove.add(t);
+            }
+        }
+        for (Triple t : toRemove) removeTriple(t);
+        cleanupPredicateIfUnused(predicate);
+    }
+
+    private void cleanupNodeIfUnused(String nodeId) {
+        if (nodeId == null) return;
+        for (Triple t : tripleMap.values()) {
+            if (t.getSubject().getIdentifier().equalsIgnoreCase(nodeId)
+                    || t.getObject().getIdentifier().equalsIgnoreCase(nodeId)) {
+                return; // still in use
+            }
+        }
+        nodeMap.remove(nodeId);
+    }
+
+    private void cleanupPredicateIfUnused(String predicateId) {
+        if (predicateId == null) return;
+        for (Triple t : tripleMap.values()) {
+            if (t.getPredicate().getIdentifier().equalsIgnoreCase(predicateId)) {
+                return; // still in use
+            }
+        }
+        predicateMap.remove(predicateId);
+    }
+
 }
