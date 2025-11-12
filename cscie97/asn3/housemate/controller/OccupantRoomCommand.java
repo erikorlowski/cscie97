@@ -29,7 +29,7 @@ public class OccupantRoomCommand implements Command {
         OccupantTracker tracker = OccupantTracker.getInstance();
         if (isEntering) {
             ApplicationTypeCommand turnOnLightsCommand = new ApplicationTypeCommand(fullyQualifiedRoomName, "light", "power", "on");
-            turnOnLightsCommand.execute();
+            System.out.println(turnOnLightsCommand.execute());
             ApplicationTypeCommand increaseThermostatCommand = new ApplicationTypeCommand(fullyQualifiedRoomName, "thermostat", "temperature", "72");
             increaseThermostatCommand.execute();
             tracker.addOccupantToRoom(occupantName, fullyQualifiedRoomName);

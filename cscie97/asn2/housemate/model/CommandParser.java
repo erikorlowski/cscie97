@@ -159,7 +159,7 @@ class CommandParser {
         String name = null;
         String address = null;
 
-        Pattern p = Pattern.compile("^house\\s*\\b(.*)\\s*address\\s*[\"“]\\s*(.*)\\s*[\"”]$", Pattern.CASE_INSENSITIVE);
+        Pattern p = Pattern.compile("^house\\s*\\b(.*)\\s*address\\s*[\"]\\s*(.*)\\s*[\"]$", Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(remainingText);
         if (m.find()) {
             name = m.group(1).trim();

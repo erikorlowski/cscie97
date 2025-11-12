@@ -8,6 +8,9 @@ define appliance tv_ava type ava room House1:Bathroom energy-use 25
 define room Bedroom floor 2 type Bedroom house House1 windows 2
 
 define appliance lights type light room House1:Bedroom energy-use 21
+define appliance lights type light room House1:LivingRoom energy-use 12
+
+define appliance thermostat type thermostat room House1:LivingRoom energy-use 43
 
 define sensor smoke_detector type smoke_detector room House1:Kitchen
 
