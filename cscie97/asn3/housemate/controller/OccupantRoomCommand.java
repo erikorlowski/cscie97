@@ -31,17 +31,18 @@ public class OccupantRoomCommand implements Command {
             ApplicationTypeCommand turnOnLightsCommand = new ApplicationTypeCommand(fullyQualifiedRoomName, "light", "power", "on");
             System.out.println(turnOnLightsCommand.execute());
             ApplicationTypeCommand increaseThermostatCommand = new ApplicationTypeCommand(fullyQualifiedRoomName, "thermostat", "temperature", "72");
-            increaseThermostatCommand.execute();
+            System.out.println(increaseThermostatCommand.execute());
             tracker.addOccupantToRoom(occupantName, fullyQualifiedRoomName);
             return String.format("%s entered %s", occupantName, fullyQualifiedRoomName);
         } else {
             tracker.removeOccupantFromRoom(occupantName, fullyQualifiedRoomName);
+            System.out.println("Occupant " + occupantName + " removed from room: " + fullyQualifiedRoomName);
 
             if(tracker.getOccupantsInRoom(fullyQualifiedRoomName).isEmpty()) {
                 ApplicationTypeCommand turnOffLightsCommand = new ApplicationTypeCommand(fullyQualifiedRoomName, "light", "power", "off");
-                turnOffLightsCommand.execute();
+                System.out.println(turnOffLightsCommand.execute());
                 ApplicationTypeCommand decreaseThermostatCommand = new ApplicationTypeCommand(fullyQualifiedRoomName, "thermostat", "temperature", "65");
-                decreaseThermostatCommand.execute();
+                System.out.println(decreaseThermostatCommand.execute());
             }
 
             return String.format("%s left %s", occupantName, fullyQualifiedRoomName);

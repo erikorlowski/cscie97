@@ -11,7 +11,7 @@ public class FindOccupantCommand implements Command {
     public String execute() {
         OccupantTracker tracker = OccupantTracker.getInstance();
         String location = tracker.getOccupantLocation(occupantName);
-        if (location != null) {
+        if (location != null && !location.equalsIgnoreCase("unknown")) {
             return String.format("Occupant %s found at %s", occupantName, location);
         } else {
             return String.format("Occupant %s not found", occupantName);

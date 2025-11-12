@@ -43,7 +43,8 @@ public class AvaObserver implements StatusObserver {
                 Command cmd = new ApplicationTypeCommand(fullyQualifiedRoomName, "light", "power", "OFF");
                 System.out.println(cmd.execute());
             } else if(newValue.toLowerCase().startsWith("where is ")) {
-                Command cmd = new FindOccupantCommand(fullyQualifiedRoomName);
+                String occupantName = newValue.substring(9).trim();
+                Command cmd = new FindOccupantCommand(occupantName);
                 System.out.println(cmd.execute());
             } else {
                 // try to parse input like: "appliance_type status_name value"

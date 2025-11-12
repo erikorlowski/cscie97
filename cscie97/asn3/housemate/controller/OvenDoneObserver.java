@@ -12,7 +12,7 @@ public class OvenDoneObserver implements StatusObserver {
             return;
         }
 
-        if (status.trim().equals("time_to_cook") && newValue.trim().equals("0")) {
+        if (status.trim().equals("TimeToCook") && newValue.trim().equals("0")) {
             Command cmd = new OvenDoneCommand(device);
             System.out.println(cmd.execute());
         }

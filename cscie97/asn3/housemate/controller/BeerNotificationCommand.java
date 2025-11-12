@@ -25,18 +25,24 @@ public class BeerNotificationCommand implements Command {
         String status = String.format("Refrigerator '%s' currently has %d beer(s).", fullyQualifiedRefrigeratorName, beerCount);
         System.out.println(status);
         System.out.print("Would you like to order more beer? (yes/no): ");
-        try (java.util.Scanner scanner = new java.util.Scanner(System.in)) {
-            String answer = scanner.nextLine().trim().toLowerCase();
+        java.util.Scanner scanner = new java.util.Scanner(System.in);
+        String answer;
+        if (scanner.hasNext()) {
+            // read next token
+            answer = scanner.next().trim().toLowerCase();
+        } else {
+            // no input available; treat as "no"
+            answer = "";
+        }
 
-            if (answer.equals("yes") || answer.equals("y")) {
-                String email = String.format(
-                    "To: %s\nSubject: Beer Refill Request\n\nHello,\n\nPlease send additional beer to %s. Current count: %d.\n\nThank you.\n",
-                    fullyQualifiedRefrigeratorName, fullyQualifiedRefrigeratorName, beerCount
-                );
-                return email;
-            } else {
-                return String.format("No beer will be ordered for %s (current count: %d).", fullyQualifiedRefrigeratorName, beerCount);
-            }
+        if (answer.equals("yes") || answer.equals("y")) {
+            String email = String.format(
+                "To: %s\nSubject: Beer Refill Request\n\nHello,\n\nPlease send additional beer to %s. Current count: %d.\n\nThank you.\n",
+                fullyQualifiedRefrigeratorName, fullyQualifiedRefrigeratorName, beerCount
+            );
+            return email;
+        } else {
+            return String.format("No beer will be ordered for %s (current count: %d).", fullyQualifiedRefrigeratorName, beerCount);
         }
     }
 }
