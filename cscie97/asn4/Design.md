@@ -226,6 +226,15 @@ In order to use certain commands, an Admin User must be logged in.
 |--|
 | With the exception of the create_user, add_user_credential, login, logout and check_access commands, all commands described in this document shall throw an AccessDeniedException if an Admin User is not currently logged in with a valid AccessToken. |
 
+### Inventory
+An inventory of the Housemate Entitlement Service can be requested with the following command:
+
+```inventory_entitlement_service```
+
+| __Requirement: Inventory Command__ |
+|--|
+| When the inventory_entitlement_service command is received, a listing of all the objects created in the Housemate Entitlement Service shall be returned. |
+
 ### Invalid Commands
 A number of error cases for commands are laid out in this document. In addition, a catch-all requirement is added to deal with any otherwise improper commands.
 
@@ -295,7 +304,7 @@ User -- logout
 Model --- create_user
 Model --- add_user_credential
 Model --- create_resource_role
-Model --- add_resource_role_to_user
+Model -- add_resource_role_to_user
 Model --- check_access
 Controller -- create_user
 Controller -- add_user_credential
@@ -306,3 +315,109 @@ Controller -- check_access
 ```
 
 ## Implementation
+The main class in the Housemate Entitlement Service is the EntitlementServiceApi. This singleton class is the interface used by the command processor, the Housemate Model Service and the Housemate Controller Service.
+
+The EntitlementServiceApi then uses the EntitlementServiceAbstractFactory, which implements the abstract factory design pattern to create the various objects that are used by the Housemate Entitlement Service.
+
+When the EntitlementServiceApi receives a request to check access or inventory the objects in the Housemate Entitlement Service, this is handled using the visitor design pattern. A Visitor interface is created with methods to visit all of the relevant Entitlement Service classes. One concrete Visitor class is created to handle inventory requests and another concrete Visitor class is created to handle check access requests.
+
+The final design pattern in use is the Composite design pattern to manage the relationship between Roles and Permissions.
+
+The classes that make up the Housemate Entitlement Service are explained in greated detail in the class diagram below.
+
+## Class Diagram
+```plantuml
+@startuml
+package cscie97.asn4.housemate.entitlement {
+    class EntitlementServiceApi << (S,#FF7700) Singleton >> {
+        - Set<AccessToken> accessTokens
+        - Set<User> users
+        - Set<Entitlement> entitlements
+        - Set<ResourceRole> resourceRoles
+        - Set<Resource> resources
+        + String executeCommand(String commandText)
+        - definePermission(String commandText)
+        - defineRole(String commandText)
+        - addEntitlementToRole(String commandText)
+        - createUser(String commandText)
+        - addUserCredential(String commandText)
+        - addRoleToUser(String commandText)
+        - createResourceRole(String commandText)
+        - addResourceRoleToUser(String commandText)
+        - login(String commandText)
+        - logout(String commandText)
+        - checkAccess(String commandText)
+    }
+
+    class EntitlementServiceAbstractFactory << (S,#FF7700) Singleton >> {
+        + Permission createPermission(String id, String name, String description)
+        + Role createRole(String id, String name, String description)
+        + User createUser(String id, String name)
+        + Credential createCredential(String userId, boolean isPassword, String value)
+        + Resource createResource(String name)
+        + ResourceRole createResourceRole(String name, Role role, Resource resource)
+        + AccessToken createAccessToken(User user)
+    }
+
+    interface Visitor {
+        + void visitEntitlement(Entitlement entitlement)
+        + void visitResourceRole(ResourceRole resourceRole)
+        + void visitUser(User user)
+        + void visitCredential(Credential credential)
+        + void visitResource(Resource resource)
+        + void visitAccessToken(AccessToken accessToken)
+    }
+
+    class InventoryVisitor {
+        - String inventory
+    }
+
+    class CheckAccessVisitor {
+        - User user
+        - Permission permission
+        - Resource resource
+        - boolean hasAccess
+    }
+
+    interface Visitable {
+        + void accept(Visitor visitor)
+    }
+
+    abstract class Entitlement {
+        - String id
+        - String name
+        - String description
+        + boolean checkAccess(Permission permission)
+    }
+
+    class Resource {
+        - String name
+        + boolean checkAccess(Resource resource)
+    }
+
+    class Role {
+        - Set<Entitlement> children
+        + void addChild(Entitlement newChild)
+        + Set<Entitlement> getChildren()
+    }
+
+    class Permission {
+
+    }
+
+    class ResourceRole {
+        - String name
+        - Role role
+        - Resource resource
+        - boolean checkAccess(Permission permission, Resource resource)
+    }
+
+    class Credential {
+        - String userId
+        - boolean isPassword
+        - String value
+        + boolean isMatch(String signInText)
+    }
+}
+@enduml
+```
