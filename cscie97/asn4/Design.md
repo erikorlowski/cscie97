@@ -224,7 +224,7 @@ In order to use certain commands, an Admin User must be logged in.
 
 | __Requirement: Admin User for Configuration Commands__ |
 |--|
-| With the exception of the login, logout and check_access commands, all commands described in this document shall throw an AccessDeniedException if an Admin User is not currently logged in with a valid AccessToken. |
+| With the exception of the create_user, add_user_credential, login, logout and check_access commands, all commands described in this document shall throw an AccessDeniedException if an Admin User is not currently logged in with a valid AccessToken. |
 
 ### Invalid Commands
 A number of error cases for commands are laid out in this document. In addition, a catch-all requirement is added to deal with any otherwise improper commands.
@@ -251,3 +251,58 @@ When a voice command is received, the AccessToken associated with the current vo
 
 #### Housemate Controller Service Initial Login
 At startup, the Housemate Controller Service uses Housemate Entitlement Service commands to create an Admin User and authenticate that User. The AccessToken associated with this User is used for all requests made by the Housemate Controller Service to the Housemate Model Service.
+
+## Use Cases
+The actors interacting with the Housemate Entitlement Service include unknown actors attempting to create users and login, Admin Users, Non-Admin Users, the Housemate Model Service and the Housemate Controller Service.
+
+The use cases of the Housemate Entitlement Service include creating and configuring users, logging in and out, creating and allocating entitlements and checking access to perform certain actions. The use cases are laid out in greater detail below.
+
+```plantuml
+@startuml
+left to right direction
+
+actor Unknown as "Unknown Actor"
+actor Admin as "Admin User"
+actor User as "Non-Admin User"
+actor Model as "Housemate Model Service"
+actor Controller as "Housemate Controller Service"
+
+rectangle EntitlementService as "Housemate Entitlement Service" {
+    usecase define_permissions as "Define Permissions"
+    usecase define_roles as "Define Roles"
+    usecase add_entitlement as "Add Entitlements to Roles"
+    usecase create_user as "Create Users"
+    usecase add_user_credential as "Add User Credentials"
+    usecase add_role_to_user as "Add Role to User"
+    usecase create_resource_role as "Create Resource Role"
+    usecase add_resource_role_to_user as "Add Resource Role to User"
+    usecase login as "Login a User"
+    usecase logout as "Logout a User"
+    usecase check_access as "Check Access to Perform an Action"
+}
+
+Unknown --- create_user
+Unknown --- add_user_credential
+Unknown --- login
+Admin --- define_permissions
+Admin --- define_roles
+Admin --- add_entitlement
+Admin --- create_resource_role
+Admin --- check_access
+Admin --- logout
+User -- check_access
+User -- logout
+Model --- create_user
+Model --- add_user_credential
+Model --- create_resource_role
+Model --- add_resource_role_to_user
+Model --- check_access
+Controller -- create_user
+Controller -- add_user_credential
+Controller -- login
+Controller -- check_access
+
+@enduml
+```
+
+## Implementation
