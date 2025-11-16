@@ -100,6 +100,10 @@ Resource Roles are created with the following command:
 |--|
 | When a create_resource_role command is run, if a Role and Resource are found with the specified parameters, a new Resource Role shall be created with the provided resource_role_name, role_id and resource_id. |
 
+| __Requirement: Resource Role Creation on Existing Resource Role__ |
+|--|
+| When a create_resource_role command is run and the resource_role_name already exists, the command shall be executed successfully with the Resource Role being associated with the new role_id and resource_id. |
+
 ### User Management
 Users interact with the Housemate System through commands and through interacting the Housemate devices. The Housemate Entitlement Service has Admin users with access to configure the Housemate Entitlement Service and interact with any home and Non-Admin users who only have access to interact with Homes they are associated with.
 
@@ -131,6 +135,38 @@ Users also have credentials. A User's credentials are configured through the fol
 |--|
 | If the add_user_credential command is run and the second argument is "voice_print", the User's voiceprint shall be saved and the User shall be registered as a Non-Admin. |
 
+In order for Users to perform actions, they must be associated with Roles and Resource Roles. Users are given a Role with the following command:
+
+```add_role_to_user <user_id>, <role>```
+
+| __Requirement: Add Role To Invalid User__ |
+|--|
+| If the add_role_to_user command is executed and the user_id cannot be found, the command shall be rejected and an error message shall be displayed. |
+
+| __Requirement: Add Invalid Role to User__ |
+|--|
+| If the add_role_to_user command is executed and the role cannot be found, the command shall be rejected and an error message shall be displayed. |
+
+| __Requirement: Add Role to User Success__ |
+|--|
+| If the add_role_to_user command is run with a valid user_id and role, the User shall be given the specified Role. |
+
+Users are given Resource Roles through the following command:
+
+```add_resource_role_to_user <user_id>, <resource_role>```
+
+| __Requirement: Add Resource Role To Invalid User__ |
+|--|
+| If the add_resource_role_to_user command is executed and the user_id cannot be found, the command shall be rejected and an error message shall be displayed. |
+
+| __Requirement: Add Invalid Resource Role to User__ |
+|--|
+| If the add_resource_role_to_user command is executed and the resource_role cannot be found, the command shall be rejected and an error message shall be displayed. |
+
+| __Requirement: Add Resource Role to User Success__ |
+|--|
+| If the add_resource_role_to_user command is run with a valid user_id and resource_role, the User shall be given the specified Resource Role. |
+
 ### Authentication
 When Users are authenticated, an AccessToken is created for the User.
 
@@ -154,6 +190,10 @@ Non-Admin Users are authenticated through the following command:
 |--|
 | If the login command is executed and [it is not formatted properly for an Admin or Non-Admin login] OR [the credential information provided does not match a User] then an AuthenticationException shall be thrown and the authentication attempt shall be rejected. |
 
+| __Request: AccessToken After Login__ |
+|--|
+| If the login command is called successfully by the Housemate Model Service or the Housemate Controller Service, the newly created AccessToken shall be returned. |
+
 #### Access Token Handling
 When a User is authenticated, an AccessToken is created. This AccessToken is attached to the User and stays active until it is logged out or until it is timed out.
 
@@ -167,4 +207,47 @@ An AccessToken is logged out through the following command:
 
 | __Requirement: Access Token Logout__ |
 |--|
-| When the logout command is executed
+| When the logout command is executed successfully, any subsequent attempts to use the provided access key shall result in an InvalidAccessTokenException being thrown. |
+
+| __Requirement: Access Token Logout Not Found__ |
+|--|
+| When the logout command is executed, if the auth_token provided is not found, an InvalidAccessTokenException shall be thrown. |
+
+When AccessTokens are created, they are given an expiration time. This expiration time is renewed each time the AccessToken is used. If an attempt is made to use the AccessToken after its expiration time has expires, an exception is thrown.
+
+| __Requirement: Access Token Timeout__ |
+|--|
+| When an attempt is made to use an AccessToken more than 1 hour after when the AccessToken was created or that last time it was used (whichever is later), an InvalidAccessTokenException shall be thrown. |
+
+#### Authentication Required for Administrator Commands
+In order to use certain commands, an Admin User must be logged in.
+
+| __Requirement: Admin User for Configuration Commands__ |
+|--|
+| With the exception of the login, logout and check_access commands, all commands described in this document shall throw an AccessDeniedException if an Admin User is not currently logged in with a valid AccessToken. |
+
+### Invalid Commands
+A number of error cases for commands are laid out in this document. In addition, a catch-all requirement is added to deal with any otherwise improper commands.
+
+| __Requirement: Improper Housemate Entitlement Service Commands__ |
+|--|
+| If a command is processed by the Housemate Entitlement Service and this command is not properly formatted according to the commands outlined in this document, the command shall be rejected and an appropriate error message shall be shown. |
+
+### External Interactions
+In order to function properly in the Housemate System as a whole, the Housemate Entitelement Service interacts with the Housemate Model Service and the Housemate Controller Service.
+
+#### check_access Interactions with Housemate Model Service
+When the Housemate Model Service receives a request to view or change any Housemate Model Objects, it sends a check_access request to the Housemate Entitlement Service. The permission_id is be view_<device_type> for read only requests and control_<device_type> for requests that modify the device.
+
+#### Occupants Interaction with Housemate Model Service
+When a new Occupant is created in the Housemate Model Service, the Housemate Model Service sends a create_user request to the Housemate Entitlement Service, followed by an add_user_credential request for a default voiceprint associated with the newly created User.
+
+When an Occupant is associated with a House, a create_resource_role request is made with the resource_role_name of <House Name>_(Adult|Child|Pet)_Resource_Role, a role of (Adult|Child|Pet)_Role and a resource of <House Name>. This is followed by an add_resource_role_to_user request to add the newly created Resource Role to the User.
+
+#### Voice Command Device Interaction with Housemate Controller Service
+When the 'voiceprint' status on an Ava device is modified, the Housemate Controller Service sends a login request to the Housemate Entitlement Service with the voiceprint associated with the status value.
+
+When a voice command is received, the AccessToken associated with the current voiceprint status value of the Ava device is used in a check_access request to the Housemate Entitlement Service.
+
+#### Housemate Controller Service Initial Login
+At startup, the Housemate Controller Service uses Housemate Entitlement Service commands to create an Admin User and authenticate that User. The AccessToken associated with this User is used for all requests made by the Housemate Controller Service to the Housemate Model Service.
