@@ -434,6 +434,9 @@ package cscie97.asn4.housemate.entitlement {
         - Set<Credential> credentials
         - Set<Entitlement> entitlements
         - Set<ResourceRole> resourceRoles
+        + void addCredential(Credential credential)
+        + void addEntitlement(Entitlement entitlement)
+        + void addResourceRole(ResourceRole resourceRole)
     }
 
     class AccessToken {
@@ -637,7 +640,11 @@ The Role class is used to represent a logic grouping of Permissions and sub-Role
 The User class represents a User of the Housemate system and stores their Credentials and access. AccessTokens are not stored by the User, but instead, Users are referenced through AccessTokens.
 
 #### Methods
-Getters and setters of properties and associations are implemented.
+| Method Name | Methid Signature | Description |
+|--|--|--|
+| addCredential | void addCredential(Credential credential) | Associates the credential with the User. |
+| addEntitlement | void addEntitlement(Entitlement entitlement) | Associates the Entitlement with the User. |
+| addResourceRole | void addResourceRole(ResourceRole resourceRole) | Associates the ResourceRole with the User. |
 
 #### Properties
 | Property Name | Type | Description |
@@ -713,3 +720,113 @@ An AuthenticationException is thrown when a login attempt fails.
 | Property Name | Type | Description |
 |--|--|--|
 | message | String | A message explaining the authentication failure. |
+
+## Implementation Details
+Below is a detailed view of the interactions between the Housemate Entitlement Service, Housemate Controller Service and Housemate Model Service for typical useage of the Housemate system.
+
+```plantuml
+@startuml
+scale max 800 width
+
+actor Admin as "Admin User"
+actor User as "Non-Admin User"
+participant CommandInterface
+participant Model as "ModelServiceApi"
+participant Controller as "ControllerServiceApi"
+participant Entitlement as "EntitlementServiceApi"
+participant Factory as "EntitlementServiceAbstractFactory"
+participant AdminUser as "User : adminUser"
+participant AdminCredential as "Credential : adminCredential"
+participant AdminAccessToken as "AccessToken : adminAccessToken"
+participant Role as "Role : adultRole"
+participant Resource as "Resource : house1"
+participant ResourceRole as "ResourceRole : adultHouse1"
+participant Permission as "Permission : controlLights"
+
+Admin -> CommandInterface : create_user admin, Admin
+CommandInterface -> Entitlement : executeCommand("create_user admin, Admin")
+Entitlement -> Factory : createUser("admin", "Admin")
+Factory -> AdminUser : new User("admin", "Admin")
+Admin -> CommandInterface : add_user_credential, admin, password, secret
+CommandInterface -> Entitlement : executeCommand("add_user_credential, admin, password, secret")
+Entitlement -> Factory : createCredential("admin", true, "secret")
+Factory -> AdminCredential : new Credential("admin", true, "secret")
+Factory -> AdminUser : addCredential(adminCredential)
+Admin -> CommandInterface : login admin, password secret
+CommandInterface -> Entitlement : executeCommand("login admin, password secret")
+Entitlement -> AdminAccessToken : new AccessToken(adminCredential, adminUser)
+Admin -> CommandInterface : define_permission, control_lights, control_lights, "Turn on and off lights"
+CommandInterface -> Entitlement : executeCommand("define_permission, control_lights, control_lights, \"Turn on and off lights\"")
+Entitlement -> Factory : createPermission("control_lights", "control_lights", "Turn on and off lights")
+Factory -> Permission : new Permission("control_lights", "control_lights", "Turn on and off lights")
+Admin -> CommandInterface : define_role, adult_user, adult_user, "An adult Housemate User"
+CommandInterface -> Entitlement : executeCommand("define_role, adult_user, adult_user, \"An adult Housemate User\"")
+Entitlement -> Factory : createRole("adult_user", "adult_user", "An adult Housemate User")
+Factory -> Role : new Role("adult_user", "adult_user", "An adult Housemate User")
+Admin -> CommandInterface : define occupant John type Adult
+CommandInterface -> Model : executeCommand("define occupant John type Adult")
+Model -> Entitlement : executeCommand("create_user John John")
+note right
+    User created in a similar manner to above.
+end note
+Model -> Entitlement : executeCommand ("add_user_credential, John, voiceprint, --John--")
+note right
+    Credential created in a similar manner to above.
+end note
+Entitlement --> Model
+Admin -> CommandInterface : add occupant John to house House1
+CommandInterface -> Model : executeCommand("add occupant John to house House1")
+Model -> Entitlement : executeCommand("create_resource_role house1Adult, adult_user, House1")
+Entitlement -> Factory : createResource("House1")
+Factory -> Resource : new Resource("House1")
+Entitlement -> Factory : createResourceRole("House1Adult", adultRole, house1)
+Factory -> ResourceRole : new ResourceRole("House1Adult", adultRole, house1)
+User -> CommandInterface : set appliance House1:Kitchen:Ava status voiceprint value --John--
+CommandInterface -> Model : executeCommand("set appliance House1:Kitchen:Ava status voiceprint value --John--")
+Model -> Entitlement : executeCommand("login voiceprint --John--")
+note right
+    Login performed in the same manner as above.
+end note
+Entitlement --> Model
+User -> CommandInterface : set appliance House1:Kitchen:Ava status voice_command value Lights_On
+CommandInterface -> Model : executeCommand("set appliance House1:Kitchen:Ava status voice_command value Lights_On")
+Model -> Controller
+note right
+    Handle voice command
+end note
+Controller -> Model : executeCommand("set appliance House1:Kitchen:Lights status power value on", johnAccessToken)
+Model -> Entitlement : executeCommand("check_access johnAccessToken, control_lights, House1:Kitchen:Lights")
+
+@enduml
+```
+
+This diagram depicts the process of provisioning Users, Entitlements and Resources. It also shows the processing of creating User credentials and authenticating. Finally, it shows a typical process for a user executing a command and how the access check takes place.
+
+## Exception Handling
+Exceptions are primarily handled by the three Exception classes. The InvalidAccessTokenException class handles cases where an AccessToken is expired or logged out. The AccessDeniedException handles cases where an access request is rejected because the AccessToken provided does not have the correct access. Finally, the AuthenticationException handles errors during user authentication.
+
+In all cases, execution of the command script shall continue past any Exceptions and a helpful error message shall be returned.
+
+## Testing
+The testing for the Housemate Entitlement Service shall include the following:
+
+* Creating an Admin and Non-Admin User
+* Creating Credentials for each of these Users
+* Logging in with each of these Users
+* An Admin User creating a Permission, a Role and a Sub-Role
+* A Non-Admin User being created by the Housemate Model Service
+* A Non-Admin User being given a Resource Role by being associated with a House
+* A request needing authentication being made directly to the Housemate Model Service and being accepted
+* A request needing authentication being made directly to the Housemate Model Service and being rejected
+* A request needing authentication being made through the Housemate Controller Service and being accepted
+* A request needing authentication being made through the Housemate Controller Service and being rejected
+* An attempt to use an expired AccessToken (this can be achieved by temporarily changing the timeout time and introducing a sleep command into the command processor)
+
+## Risks
+The Housemate System has a high amount of access to user homes. Because of that, it is an ethical responsibility of the Housemate Company to ensure that the safety of Housemate users is protected by ensuring the security of Housemate systems. The Housemate Entitlement Service provides the protection for users to ensure that this service remains safe and secure.
+
+One vulnerability is in the command line interface. Given the commands specified in the assignment requirements, an individual, authorized or otherwise, with access to the command line interface would have easy ability to create Admin and Non-Admin users. They would also have easy ability to create Roles and Permissions and assign themselves to these Entitlements. This would grant them a very high level of access to Houses across the Housemate system.
+
+Because of that, thorough threat modeling must be performed to ensure that unauthorized agents do not receive access to the Housemate system.
+
+An additional risk is that passwords are being passed as plain text to the command line. This could additionally pose a security risk to users, risking the security of their passwords.

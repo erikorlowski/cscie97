@@ -7,7 +7,7 @@ import cscie97.asn3.housemate.controller.ControllerServiceApi;
 /**
  * Test driver for the HouseMate system.
  */
-public class TestDriver {
+public class CommandInterface {
     /**
      * Main method to execute the test driver.
      *
