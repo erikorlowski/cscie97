@@ -378,7 +378,7 @@ package cscie97.asn4.housemate.entitlement {
     }
 
     class CheckAccessVisitor {
-        - User user
+        - AccessToken token
         - Permission permission
         - Resource resource
         - boolean hasAccess
@@ -547,3 +547,88 @@ The EntitlementServiceAbstractFactory is the main interface in the Housemate Ent
 | createResource | Resource createResource(String name) | Creates a new Resource with the specified name, corresponding to the fully qualified name of a Housemate Model Service object. |
 | createResourceRole | ResourceRole createResourceRole(String name, Role role, Resource resource) | Creates a new ResourceRole with the parameters specified. |
 | createAccessToken | AccessToken createAccessToken(User user, Credential credential) | Creates a new AccessToken for the specified User and Credential. |
+
+### Visitable
+The Visitable interface is used for Visitors to interact with Entitlement Service objects. This is used to facilitate taking an inventory of Entitlement Service objects and checking for access.
+
+#### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| accept | void accept(Visitor visitor) | Receives requests from the Visitor implementations. |
+
+### Visitor
+The Visitor interface is the interface implemented by the InventoryBuilder and CheckAccessVisitor to traverse the objects in the Housemate Entitlement Service.
+
+#### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| visitEntitlement | void visitEntitlement(Entitlement entitlement) | Performs the relevant action for the Entitlement abstract class. |
+| visitResourceRole | void visitResourceRole(ResourceRole resourceRole) | Performs the relevant action for the ResourceRole class. |
+| visitUser | void visitUser(User user) | Performs the relevant action for the User class. |
+| visitCredential | void visitCredential(Credential credential) | Performs the relevant action for the Credential class. |
+| visitResource | void visitResource(Resource resource) | Performs the relevant action for the Resource class. |
+| visitAccessToken | void visitAccessToken(AccessToken accessToken) | Performs the relevant action for the AccessToken class. |
+
+### InventoryVisitor
+The InventoryVisitor class is used to build an inventory of the objects in the Housemate Entitlement Service.
+
+#### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| inventory | String | A running record of the inventory of objects in the Housemate Entitlement Service. |
+
+### CheckAccessVisitor
+The CheckAccessVisitor class is used to check access for a particular Permission and Resource.
+
+#### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| hasAccess | boolean | Whether it has been determined that the AccessToken has the access requested. |
+
+#### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| token | AccessToken | The AccessToken being used to request access. |
+| permission | Permission | The Permission being requested. |
+| resource | Resource | The Resource that the request is trying to act on. |
+
+### Resource
+The Resource class is used to represent an object in the Housemate Model Service that a request might be made to act on.
+
+#### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| checkAccess | boolean checkAccess(Resource resource) | Returns whether this Resource is contained in and therefore has access to the Resource parameter being passed in. |
+
+#### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| name | String | The fully qualified name of the Resource as represented in the Housemate system command line interface. |
+
+### Entitlement
+The Entitlement abstract class is used to represent both Roles and Permissions in the Housemate Entitlement Service.
+
+#### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| checkAccess | boolean checkAccess(Permission permission)| Returns whether the entitlement matches or contains the given Permission. |
+
+#### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | String | The unique ID of the Entitlement. |
+| name | String | The name of the Entitlement. |
+| description | String | A description of the Entitlement. |
+
+### Permission
+The Permission class represents the most basic level of access in the Housemate Entitlement Service. It extends the Entitlement abstract class and has no additional properties or methods. The Permission class serves as a "leaf" in the composite pattern relating Roles and Permissions.
+
+### Role
+The Role class is used to represent a logic grouping of Permissions and sub-Roles that might be associated with zero or more Users. A Role serves the purpose of a "directory" in the composite pattern relating Roles and Permissions.
+
+#### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| addChild | void addChild(Entitlement newChild) | Adds an Entitlement to the access granted by this Role. |
+| getChildren | Set<Entitlement> getChildren() | Returns a Set of the direct children of the Role. |
+
