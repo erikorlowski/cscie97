@@ -328,6 +328,9 @@ The classes that make up the Housemate Entitlement Service are explained in grea
 ## Class Diagram
 ```plantuml
 @startuml
+scale max 800 width
+set separator :
+
 package cscie97.asn4.housemate.entitlement {
     class EntitlementServiceApi << (S,#FF7700) Singleton >> {
         - Set<AccessToken> accessTokens
@@ -359,6 +362,8 @@ package cscie97.asn4.housemate.entitlement {
         + AccessToken createAccessToken(User user)
     }
 
+    EntitlementServiceApi ..> EntitlementServiceAbstractFactory
+
     interface Visitor {
         + void visitEntitlement(Entitlement entitlement)
         + void visitResourceRole(ResourceRole resourceRole)
@@ -378,6 +383,9 @@ package cscie97.asn4.housemate.entitlement {
         - Resource resource
         - boolean hasAccess
     }
+
+    Visitor <|-- InventoryVisitor
+    Visitor <|-- CheckAccessVisitor
 
     interface Visitable {
         + void accept(Visitor visitor)
@@ -417,7 +425,75 @@ package cscie97.asn4.housemate.entitlement {
         - boolean isPassword
         - String value
         + boolean isMatch(String signInText)
+        - boolean isAdmin
+    }
+
+    class User {
+        - String id
+        - String name
+        - Set<Credential> credentials
+        - Set<Entitlement> entitlements
+        - Set<ResourceRole> resourceRoles
+    }
+
+    class AccessToken {
+        - char[] token
+        - Credential credential
+        - User user
+        - boolean isAdmin
+        - long lastUsedTimeMsecs
+    }
+
+    Visitable <|-- Entitlement
+    Visitable <|-- Resource
+    Visitable <|-- ResourceRole
+    Visitable <|--- Credential
+    Visitable <|--- User
+    Visitable <|--- AccessToken
+    Entitlement <|-- Role
+    Entitlement <|-- Permission
+    Entitlement --o Role
+    ResourceRole "1" o-- "1" Role
+    ResourceRole "1" o-- "1" Resource
+    Visitable --> Visitor
+    EntitlementServiceAbstractFactory --> Visitable
+    EntitlementServiceApi --> Visitable
+    EntitlementServiceApi --> InvalidAccessTokenException
+    EntitlementServiceApi --> AccessDeniedException
+    EntitlementServiceApi --> AuthenticationException
+    User "1" *-- "*" Credential
+    User "1" --o "1" AccessToken
+    AccessToken "1" o-- "1" Credential
+
+
+    class InvalidAccessTokenException {
+        - char[] accessToken
+    }
+
+    class AccessDeniedException {
+        - String objectAttemptedToAccess
+        - String user
+    }
+
+    class AuthenticationException {
+        - String user
     }
 }
+
+package cscie97.asn3.housemate.controller {
+    class ControllerServiceApi {
+
+    }
+}
+
+package cscie97.asn2.housemate.model {
+    class ModelServiceApi {
+
+    }
+}
+
+ControllerServiceApi --> EntitlementServiceApi
+ModelServiceApi --> EntitlementServiceApi
+
 @enduml
 ```
