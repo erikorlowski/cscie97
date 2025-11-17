@@ -464,6 +464,8 @@ package cscie97.asn4.housemate.entitlement {
     User "1" *-- "*" Credential
     User "1" --o "1" AccessToken
     AccessToken "1" o-- "1" Credential
+    User "*" --o "*" Entitlement
+    User "*" --o "*" ResourceRole
 
 
     class InvalidAccessTokenException {
@@ -497,3 +499,11 @@ ModelServiceApi --> EntitlementServiceApi
 
 @enduml
 ```
+
+The classes used in the Housemate Entitlement Service and their relationships are shown in the diagram above. Further detail will be included in the Class Dictionary.
+
+Notably, the Visitable interface covers all of the "domain" classes for the Housemate Entitlement Service, so many of the relationships with the higher level classes of the service are shown with this interface.
+
+Also of note are the relationships between the User and athentication related classes. The AccessToken class is the first point of interaction in checking access. This class has a reference to its associated User and Credential. The Credential is needed to determine if the AccessToken has Admin rights. The reference to the User is then used to determine the Entitlements and ResourceRoles available.
+
+## Class Dictionary
