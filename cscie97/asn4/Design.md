@@ -339,17 +339,17 @@ package cscie97.asn4.housemate.entitlement {
         - Set<ResourceRole> resourceRoles
         - Set<Resource> resources
         + String executeCommand(String commandText)
-        - definePermission(String commandText)
-        - defineRole(String commandText)
-        - addEntitlementToRole(String commandText)
-        - createUser(String commandText)
-        - addUserCredential(String commandText)
-        - addRoleToUser(String commandText)
-        - createResourceRole(String commandText)
-        - addResourceRoleToUser(String commandText)
-        - login(String commandText)
-        - logout(String commandText)
-        - checkAccess(String commandText)
+        - String definePermission(String commandText)
+        - String defineRole(String commandText)
+        - String addEntitlementToRole(String commandText)
+        - String createUser(String commandText)
+        - String addUserCredential(String commandText)
+        - String addRoleToUser(String commandText)
+        - String createResourceRole(String commandText)
+        - String addResourceRoleToUser(String commandText)
+        - String login(String commandText)
+        - String logout(String commandText)
+        - String checkAccess(String commandText)
     }
 
     class EntitlementServiceAbstractFactory << (S,#FF7700) Singleton >> {
@@ -359,7 +359,7 @@ package cscie97.asn4.housemate.entitlement {
         + Credential createCredential(String userId, boolean isPassword, String value)
         + Resource createResource(String name)
         + ResourceRole createResourceRole(String name, Role role, Resource resource)
-        + AccessToken createAccessToken(User user)
+        + AccessToken createAccessToken(User user, Credential credential)
     }
 
     EntitlementServiceApi ..> EntitlementServiceAbstractFactory
@@ -507,3 +507,43 @@ Notably, the Visitable interface covers all of the "domain" classes for the Hous
 Also of note are the relationships between the User and athentication related classes. The AccessToken class is the first point of interaction in checking access. This class has a reference to its associated User and Credential. The Credential is needed to determine if the AccessToken has Admin rights. The reference to the User is then used to determine the Entitlements and ResourceRoles available.
 
 ## Class Dictionary
+### EntitlementServiceApi
+The EntitlementServiceApi is the top level class of the Housemate Entitlement Service. This is the class that external services and the command line interface interact with. This is implemented as a Singleton class.
+
+#### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| executeCommand | String executeCommand(String commandText) | Executes a command either from the command line or an external service and returns the output of the command or null if the command should not be processed by the Housemate Entitlement Service (i.e. it does not match one of the Entitlement Service commands). |
+| definePermission | String definePermission(String commandText) | Creates a Permission object as requested and returns a String stating that the object was created or an error message. |
+| defineRole | String defineRole(String commandText) | Creates a Role object as requested and returns a String stating that the object was created or an error message. |
+| addEntitlementToRole | String addEntitlementToRole(String commandText) | Adds an Entitlement to a Role. Returns a confirmation String if the Entitlement was added or an error message otherwise. |
+| createUser | String createUser(String commandText) | Creates a new User as requested and returns a String confirming the new User or an error message. |
+| addUserCredential | String addUserCredential(String commandText) | Adds a new Credential to an existing User and returns a String confirming this action or an error message. |
+| addRoleToUser | String addRoleToUser(String commandText) | Associates a User with a Role and returns a String confirming this action or an error message. |
+| createResourceRole | String createResourceRole(String commandText) | Creates a new ResourceRole as requested and returns a String confirming this action or an error message. |
+| addResourceRoleToUser | String addResourceRoleToUser(String commandText) | Associates an existing ResourceRole with an existing User and returns a String confirming this action or an error message. |
+| login | String login(String commandText) | Logs the User in with the Credentials specified. Returns the AccessToken on success and an error message on failure. |
+| logout | String logout(String commandText) | Logs the User with the given AccessToken out of the Housemate Entitlement Service. Returns a String indicating the successful logout or an error message. |
+| checkAccess | String checkAccess(String commandText) | Checks if the provided AccessToken has access to the provided Permission with the provided Resource. Returns a String starting with "Access Granted" or "Access Denied". |
+
+#### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| accessTokens | Set\<AccessToken> | A Set of all the AccessTokens that might currently be active in the Housemate Entitlement Service. |
+| users | Set\<User> | A Set of all the Users that have been created in the Housemate Entitlement Service. |
+| entitlements | Set\<Entitlement> | A Set of all the Entitlements in the Housemate Entitlement Service. |
+| resourceRoles | Set\<ResourceRole> | A set of all the ResourceRoles in the Housemate Entitlement Service. |
+| resources | Set\<Resource> | A Set of all the Resources in the Housemate Entitlement Service. |
+
+### EntitlementServiceAbstractFactory
+The EntitlementServiceAbstractFactory is the main interface in the Housemate Entitlement Service to create new instances of the classes making up the service. It is implemented as a Singleton class.
+
+| Method Name | Method Signature | Description |
+|--|--|--|
+| createPermission | Permission createPermission(String id, String name, String description) | Creates a new Permission object with the specified parameters. |
+| createRole | Role createRole(String id, String name, String description) | Creates a new Role object with the specified parameters. |
+| createUser | User createUser(String id, String name) | Creates a new User with the specified parameters. |
+| createCredential | Credential createCredential(String userId, boolean isPassword, String value) | Creates a new Admin or Non-Admin Credential with the specified parameters. |
+| createResource | Resource createResource(String name) | Creates a new Resource with the specified name, corresponding to the fully qualified name of a Housemate Model Service object. |
+| createResourceRole | ResourceRole createResourceRole(String name, Role role, Resource resource) | Creates a new ResourceRole with the parameters specified. |
+| createAccessToken | AccessToken createAccessToken(User user, Credential credential) | Creates a new AccessToken for the specified User and Credential. |
