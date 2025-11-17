@@ -442,6 +442,7 @@ package cscie97.asn4.housemate.entitlement {
         - User user
         - boolean isAdmin
         - long lastUsedTimeMsecs
+        + boolean isExpired()
     }
 
     Visitable <|-- Entitlement
@@ -478,7 +479,7 @@ package cscie97.asn4.housemate.entitlement {
     }
 
     class AuthenticationException {
-        - String user
+        - String message
     }
 }
 
@@ -632,3 +633,83 @@ The Role class is used to represent a logic grouping of Permissions and sub-Role
 | addChild | void addChild(Entitlement newChild) | Adds an Entitlement to the access granted by this Role. |
 | getChildren | Set<Entitlement> getChildren() | Returns a Set of the direct children of the Role. |
 
+### User
+The User class represents a User of the Housemate system and stores their Credentials and access. AccessTokens are not stored by the User, but instead, Users are referenced through AccessTokens.
+
+#### Methods
+Getters and setters of properties and associations are implemented.
+
+#### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | String | The unique ID of the user. |
+| name | String | The name of the User. |
+
+#### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| credentials | Set<Credential> | A Set of the Credentials associated with this User. |
+| entitlements | Set<Entitlement> | A Set of the Entitlements associated with this User. |
+| resourceRoles | Set<ResourceRole> | A Set of the ResourceRoles associated with this User. |
+
+### Credential
+The Credential class represents a method for a User to login to the Housemate Entitlement Service. This can eiter be a User ID and password or a voiceprint.
+
+#### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| isMatch | boolean isMatch(String signInText) | Checks if the signInText provided from a login request matches this Credential. |
+
+### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| userId | String | The userId associated with this credential or null for a voiceprint. |
+| isPassword | boolean | Stores whether this Credential represents a username/password combo or a voiceprint. |
+| value | String | The hashed value of the password or voiceprint. |
+| isAdmin | boolean | Stores whether this Credential grants Admin access. For now, this is the same as isPassword, but a separate property is being included to prevent issues with future potential changes. |
+
+### AccessToken
+The AccessToken class represents an authenticated session with the Housemate Entitlement Service. An AccessToken is created when a User logs in and deleted when a User logs out or an attempt is made to use an expired AccessToken.
+
+#### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| isExpired | boolean isExpired() | Returns whether the AccessToken has timed out. |
+
+#### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| token | char[] | The token used to store this AccessToken. |
+| isAdmin | boolean | Whether this AccessToken represents an Admin users. |
+| lastUsedTimeMsecs | long | A system timestamp in milliseconds of the last time this AccessToken logged in or was used. This is used to monitor for timeouts. |
+
+#### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| credential | Credential | The Credential used to create this AccessToken. |
+| user | User | The User associated with this AccessToken. |
+
+### InvalidAccessTokenException
+An InvalidAccessTokenException is thrown whever the Housemate Entitlement Service attempts to use an expired of logged out AccessKey.
+
+#### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| accessToken | chaf[] | The accessToken that was used for the failed request. |
+
+### AccessDeniedException
+The AccessDeniedException is thrown when an attenpt to antthing without acess.
+
+#### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| objectAttemptedToAccess | String | The object in the Housemate Model Service the User was attempting to access. |
+| user | String | The User name attempting the access request. |
+
+### AuthenticationException
+An AuthenticationException is thrown when a login attempt fails.
+
+#### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| message | String | A message explaining the authentication failure. |
