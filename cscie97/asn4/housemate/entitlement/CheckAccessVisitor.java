@@ -1,10 +1,21 @@
 package cscie97.asn4.housemate.entitlement;
 
+/**
+ * CheckAccessVisitor evaluates whether a User (when visited) has the
+ * specified Permission for a given Resource. It is used by the
+ * EntitlementServiceApi to implement check access semantics.
+ */
 public class CheckAccessVisitor implements Visitor {
     private final Permission permission;
     private final Resource resource;
     private boolean hasAccess = false;
 
+    /**
+     * Create a CheckAccessVisitor.
+     *
+     * @param permission the permission to check
+     * @param resource the resource being accessed
+     */
     public CheckAccessVisitor(Permission permission, Resource resource) {
         this.permission = permission;
         this.resource = resource;

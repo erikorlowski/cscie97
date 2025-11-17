@@ -1,5 +1,9 @@
 package cscie97.asn4.housemate.entitlement;
 
+/**
+ * InventoryVisitor builds a textual inventory of the objects it visits. It is
+ * useful for debugging and for the inventory_entitlement_service command.
+ */
 public class InventoryVisitor implements Visitor {
     private final StringBuilder inventory = new StringBuilder();
 

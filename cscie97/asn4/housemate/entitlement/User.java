@@ -3,6 +3,10 @@ package cscie97.asn4.housemate.entitlement;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Represents a user of the Housemate system. Users hold credentials,
+ * entitlements (permissions and roles) and resource roles.
+ */
 public class User implements Visitable {
     private final String id;
     private final String name;
@@ -10,6 +14,12 @@ public class User implements Visitable {
     private final Set<Entitlement> entitlements = new HashSet<>();
     private final Set<ResourceRole> resourceRoles = new HashSet<>();
 
+    /**
+     * Create a new user.
+     *
+     * @param id the user identifier
+     * @param name the user's name
+     */
     public User(String id, String name) {
         this.id = id;
         this.name = name;
@@ -31,3 +41,4 @@ public class User implements Visitable {
         visitor.visitUser(this);
     }
 }
+

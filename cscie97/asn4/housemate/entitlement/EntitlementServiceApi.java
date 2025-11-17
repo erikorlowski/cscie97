@@ -4,6 +4,12 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Top-level API for the Housemate Entitlement Service. This singleton class
+ * accepts textual commands via executeCommand and maintains in-memory sets of
+ * users, entitlements, resource roles and tokens. The implementation is
+ * intentionally simple and intended for use in the assignment and tests.
+ */
 public class EntitlementServiceApi implements Visitable {
     private static final EntitlementServiceApi instance = new EntitlementServiceApi();
 
@@ -17,6 +23,17 @@ public class EntitlementServiceApi implements Visitable {
 
     public static EntitlementServiceApi getInstance() { return instance; }
 
+    /**
+     * Execute a textual command against the Entitlement Service. Supported
+     * commands include define_permission, define_role, add_entitlement_to_role,
+     * create_user, add_user_credential, add_role_to_user, create_resource_role,
+     * add_resource_role_to_user, login, logout, check_access and
+     * inventory_entitlement_service. This method parses the primary command
+     * token and delegates to the appropriate private handler.
+     *
+     * @param commandText the full command text
+     * @return the textual result or null for unrecognized commands
+     */
     public String executeCommand(String commandText) {
         if (commandText == null) return null;
         String trimmed = commandText.trim();

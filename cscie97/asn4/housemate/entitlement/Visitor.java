@@ -1,5 +1,9 @@
 package cscie97.asn4.housemate.entitlement;
 
+/**
+ * Visitor interface used for traversing and operating on entitlement
+ * objects such as users, resources, resource roles and access tokens.
+ */
 public interface Visitor {
     void visitEntitlement(Entitlement entitlement);
     void visitResourceRole(ResourceRole resourceRole);

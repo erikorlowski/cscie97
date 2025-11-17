@@ -1,5 +1,9 @@
 package cscie97.asn4.housemate.entitlement;
 
+/**
+ * Simple abstract factory for creating entitlement domain objects. Implemented
+ * as a singleton to centralize object creation for the Entitlement service.
+ */
 public class EntitlementServiceAbstractFactory {
     private static final EntitlementServiceAbstractFactory instance = new EntitlementServiceAbstractFactory();
 
