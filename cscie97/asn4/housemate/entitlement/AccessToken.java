@@ -7,6 +7,11 @@ package cscie97.asn4.housemate.entitlement;
  * last time it was used.
  */
 public class AccessToken implements Visitable {
+    /**
+     * Timeout length for access tokens: 1 hour in milliseconds.
+     */
+    public static final long TIMEOUT_LENGTH = 60L * 60L * 1000L;
+
     private final char[] token;
     private final Credential credential;
     private final User user;
@@ -33,6 +38,14 @@ public class AccessToken implements Visitable {
     public User getUser() { return user; }
     public boolean isAdmin() { return isAdmin; }
     public long getLastUsedTimeMsecs() { return lastUsedTimeMsecs; }
+
+    /**
+     * Returns true if this access token has expired based on the
+     * TIMEOUT_LENGTH constant and the last used timestamp.
+     */
+    public boolean isExpired() {
+        return (System.currentTimeMillis() - lastUsedTimeMsecs) > TIMEOUT_LENGTH;
+    }
 
     /**
      * Update the last-used timestamp to the current system time.

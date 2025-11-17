@@ -446,6 +446,7 @@ package cscie97.asn4.housemate.entitlement {
         - boolean isAdmin
         - long lastUsedTimeMsecs
         + boolean isExpired()
+        + void touch()
     }
 
     Visitable <|-- Entitlement
@@ -682,6 +683,7 @@ The AccessToken class represents an authenticated session with the Housemate Ent
 | Method Name | Method Signature | Description |
 |--|--|--|
 | isExpired | boolean isExpired() | Returns whether the AccessToken has timed out. |
+| touch | void touch() | Updates the timestamp used to determine whether the AccessToken has expired. |
 
 #### Properties
 | Property Name | Type | Description |
