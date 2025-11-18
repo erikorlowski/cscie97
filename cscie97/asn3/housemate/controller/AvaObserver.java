@@ -1,5 +1,9 @@
 package cscie97.asn3.housemate.controller;
 
+import cscie97.asn2.housemate.model.ModelServiceApiImpl;
+import cscie97.asn4.housemate.entitlement.EntitlementException;
+import cscie97.asn4.housemate.entitlement.EntitlementServiceApi;
+
 /**
  * Observer for Ava device status updates
  */
@@ -66,6 +70,9 @@ public class AvaObserver implements StatusObserver {
                 Command cmd = new ApplicationTypeCommand(fullyQualifiedRoomName, applianceType, statusName, value);
                 System.out.println(cmd.execute());
             }
+        } else if ("voiceprint".equalsIgnoreCase(status)) {
+            Command cmd = new VoiceprintCommand(newValue);
+            System.out.println(cmd.execute());
         }
     }
     

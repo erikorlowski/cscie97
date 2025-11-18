@@ -356,10 +356,10 @@ public class EntitlementServiceApi {
             for (User user : users) {
                 for (Credential credential : user.getCredentials()) {
                     if (!credential.isPassword() && credential.isMatch(voice)) {
-            AccessToken newToken = EntitlementServiceAbstractFactory.getInstance().createAccessToken(user, credential);
-            accessTokens.add(newToken);
-            currentAccessToken = newToken;
-            return Long.toString(newToken.getToken());
+                        AccessToken newToken = EntitlementServiceAbstractFactory.getInstance().createAccessToken(user, credential);
+                        accessTokens.add(newToken);
+                        currentAccessToken = newToken;
+                        return Long.toString(newToken.getToken());
                     }
                 }
             }

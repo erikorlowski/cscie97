@@ -254,9 +254,9 @@ When a new Occupant is created in the Housemate Model Service, the Housemate Mod
 When an Occupant is associated with a House, a create_resource_role request is made with the resource_role_name of <House Name>_(Adult|Child|Pet)_Resource_Role, a role of (Adult|Child|Pet)_Role and a resource of <House Name>. This is followed by an add_resource_role_to_user request to add the newly created Resource Role to the User.
 
 #### Voice Command Device Interaction with Housemate Controller Service
-When the 'voiceprint' status on an Ava device is modified, the Housemate Controller Service sends a login request to the Housemate Entitlement Service with the voiceprint associated with the status value.
+When the 'voiceprint' status on an Ava device is modified, the Housemate Controller Service sends a login request to the Housemate Entitlement Service with the voiceprint Credential associated with the status value.
 
-When a voice command is received, the AccessToken associated with the current voiceprint status value of the Ava device is used in a check_access request to the Housemate Entitlement Service.
+When a voice command is received, the Model Service handles setting the relevant status in the Ava device and handles the Entitlement related work in this call.
 
 #### Housemate Controller Service Initial Login
 At startup, the Housemate Controller Service uses Housemate Entitlement Service commands to create an Admin User and authenticate that User. The AccessToken associated with this User is used for all requests made by the Housemate Controller Service to the Housemate Model Service.
@@ -796,6 +796,7 @@ end note
 Entitlement --> Model
 User -> CommandInterface : set appliance House1:Kitchen:Ava status voice_command value Lights_On
 CommandInterface -> Model : executeCommand("set appliance House1:Kitchen:Ava status voice_command value Lights_On")
+Model -> Entitlement : executeCommand("check_access johnAccessToken, control_ava, House1:Kitchen:Ava")
 Model -> Controller
 note right
     Handle voice command
