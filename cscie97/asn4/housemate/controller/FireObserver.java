@@ -1,4 +1,4 @@
-package cscie97.asn3.housemate.controller;
+package cscie97.asn4.housemate.controller;
 
 /** Observer for fire status updates */
 public class FireObserver implements StatusObserver {

@@ -1,4 +1,4 @@
-package cscie97.asn2.housemate.model;
+package cscie97.asn4.housemate.model;
 
 /**
  * Represents a house in the model. A House is a ModelObject that is

@@ -1,4 +1,4 @@
-package cscie97.asn3.housemate.controller;
+package cscie97.asn4.housemate.controller;
 
 /**
  * Exception thrown when a provided controller command is invalid.

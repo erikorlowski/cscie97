@@ -1,4 +1,4 @@
-package cscie97.asn3.housemate.controller;
+package cscie97.asn4.housemate.controller;
 
 import cscie97.asn4.housemate.entitlement.EntitlementException;
 import cscie97.asn4.housemate.entitlement.EntitlementServiceApi;

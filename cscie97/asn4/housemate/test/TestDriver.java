@@ -1,14 +1,14 @@
-package cscie97.asn2.housemate.test;
+package cscie97.asn4.housemate.test;
 
-import cscie97.asn2.housemate.model.ModelServiceApi;
-import cscie97.asn2.housemate.model.ModelServiceApiImpl;
-import cscie97.asn3.housemate.controller.ControllerServiceApi;
+import cscie97.asn4.housemate.model.ModelServiceApi;
+import cscie97.asn4.housemate.model.ModelServiceApiImpl;
+import cscie97.asn4.housemate.controller.ControllerServiceApi;
 import cscie97.asn4.housemate.entitlement.EntitlementServiceApi;
 
 /**
  * Test driver for the HouseMate system.
  */
-public class CommandInterface {
+public class TestDriver {
     /**
      * Main method to execute the test driver.
      *

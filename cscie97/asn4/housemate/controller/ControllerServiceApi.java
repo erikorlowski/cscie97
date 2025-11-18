@@ -1,9 +1,9 @@
-package cscie97.asn3.housemate.controller;
+package cscie97.asn4.housemate.controller;
 
-import cscie97.asn2.housemate.model.ModelServiceApiImpl;
+import cscie97.asn4.housemate.model.ModelServiceApiImpl;
 import cscie97.asn4.housemate.entitlement.EntitlementException;
 import cscie97.asn4.housemate.entitlement.EntitlementServiceApi;
-import cscie97.asn2.housemate.model.ModelServiceApi;
+import cscie97.asn4.housemate.model.ModelServiceApi;
 
 public class ControllerServiceApi {
     public static ControllerServiceApi instance = null;

@@ -1,4 +1,4 @@
-package cscie97.asn2.housemate.model;
+package cscie97.asn4.housemate.model;
 
 /**
  * Represents an occupant in the housemate model. An Occupant is a ModelObject

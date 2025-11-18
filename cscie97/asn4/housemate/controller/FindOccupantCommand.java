@@ -1,4 +1,4 @@
-package cscie97.asn3.housemate.controller;
+package cscie97.asn4.housemate.controller;
 
 public class FindOccupantCommand implements Command {
     private String occupantName;

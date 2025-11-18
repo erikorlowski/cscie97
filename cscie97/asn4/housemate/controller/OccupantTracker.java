@@ -1,4 +1,4 @@
-package cscie97.asn3.housemate.controller;
+package cscie97.asn4.housemate.controller;
 
 import cscie97.asn1.knowledge.engine.KnowledgeGraph;
 import cscie97.asn1.knowledge.engine.Triple;

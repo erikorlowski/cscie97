@@ -1,8 +1,8 @@
-package cscie97.asn2.housemate.model;
+package cscie97.asn4.housemate.model;
 
 import cscie97.asn1.knowledge.engine.KnowledgeGraph;
 import cscie97.asn1.knowledge.engine.Triple;
-import cscie97.asn3.housemate.controller.StatusObserver;
+import cscie97.asn4.housemate.controller.StatusObserver;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;

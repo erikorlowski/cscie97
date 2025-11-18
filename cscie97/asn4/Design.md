@@ -819,9 +819,9 @@ In all cases, execution of the command script shall continue past any Exceptions
 ## Testing
 The testing for the Housemate Entitlement Service shall include the following:
 
-* Creating an Admin and Non-Admin User
-* Creating Credentials for each of these Users
-* Logging in with each of these Users
+* Creating an Admin and Non-Admin User (through voice command)
+* Creating Credentials for each of these Users (handled internally by these Model and Controller Services)
+* Logging in with each of these Users (handled internally by these Model and Controller Services)
 * An Admin User creating a Permission, a Role and a Sub-Role
 * A Non-Admin User being created by the Housemate Model Service
 * A Non-Admin User being given a Resource Role by being associated with a House
