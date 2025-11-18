@@ -205,10 +205,18 @@ public class EntitlementServiceApi {
      * @return result message
      */
     private String createUser(String commandText) throws EntitlementException {
-        String[] parts = commandText.split(",");
-        if (parts.length < 3) throw new EntitlementException("invalid create_user");
-        String id = parts[1].trim();
-        String name = unquote(parts[2].trim());
+        // Expected format: create_user user_id, user_name
+        String[] parts = commandText.split(",", 2);
+        if (parts.length < 2) throw new EntitlementException("invalid create_user");
+
+        // left side: "create_user user_id" -> extract the id token
+        String left = parts[0].trim();
+        String[] leftParts = left.split("\\s+");
+        if (leftParts.length < 2) throw new EntitlementException("invalid create_user");
+        String id = leftParts[1].trim();
+
+        // right side: the user name (may be quoted and may contain spaces)
+        String name = unquote(parts[1].trim());
         User newUser = EntitlementServiceAbstractFactory.getInstance().createUser(id, name);
         users.add(newUser);
         return "Created user " + id;
@@ -223,11 +231,18 @@ public class EntitlementServiceApi {
      * @return result message
      */
     private String addUserCredential(String commandText) throws EntitlementException {
-        String[] parts = commandText.split(",");
-        if (parts.length < 4) throw new EntitlementException("invalid add_user_credential");
-        String userId = parts[1].trim();
-        String type = parts[2].trim();
-        String value = parts[3].trim();
+        // Expected format: add_user_credential user_id, type, value
+        String[] parts = commandText.split(",", 3);
+        if (parts.length < 3) throw new EntitlementException("invalid add_user_credential");
+
+        // left side: "add_user_credential user_id" -> extract the id token
+        String left = parts[0].trim();
+        String[] leftParts = left.split("\\s+");
+        if (leftParts.length < 2) throw new EntitlementException("invalid add_user_credential");
+        String userId = leftParts[1].trim();
+
+        String type = parts[1].trim();
+        String value = unquote(parts[2].trim());
         Optional<User> u = users.stream().filter(x -> x.getId().equals(userId)).findFirst();
         if (!u.isPresent()) throw new EntitlementException("user not found");
         String typeLower = type.toLowerCase();
@@ -247,10 +262,16 @@ public class EntitlementServiceApi {
      * @return result message
      */
     private String addRoleToUser(String commandText) throws EntitlementException {
-        String[] parts = commandText.split(",");
-        if (parts.length < 3) throw new EntitlementException("invalid add_role_to_user");
-        String userId = parts[1].trim();
-        String roleId = parts[2].trim();
+        // Expected format: add_role_to_user user_id, roleId
+        String[] parts = commandText.split(",", 2);
+        if (parts.length < 2) throw new EntitlementException("invalid add_role_to_user");
+
+        String left = parts[0].trim();
+        String[] leftParts = left.split("\\s+");
+        if (leftParts.length < 2) throw new EntitlementException("invalid add_role_to_user");
+        String userId = leftParts[1].trim();
+
+        String roleId = parts[1].trim();
         Optional<User> user = users.stream().filter(x -> x.getId().equals(userId)).findFirst();
         Optional<Entitlement> role = entitlements.stream().filter(e -> e.getId().equals(roleId)).findFirst();
         if (!user.isPresent()) throw new EntitlementException("user not found");
@@ -317,25 +338,23 @@ public class EntitlementServiceApi {
         // supports: login user <userId>, password <password>
 
         if (commandText.contains("password")) {
-            String[] parts = commandText.split(",");
+            // Build sign-in text: everything after the 'login' token
+            int firstSpace = commandText.indexOf(' ');
+            if (firstSpace == -1) throw new EntitlementException("invalid login");
+            String signInText = commandText.substring(firstSpace + 1).trim();
 
-            // parts: "login user <id>", " password <pw>"
-            if (parts.length < 2) throw new EntitlementException("invalid login");
+            // parts: "user <id>", ... we still need the user id to lookup the user
+            String[] leftParts = signInText.split("\\s+");
+            if (leftParts.length < 2) throw new EntitlementException("invalid login");
+            String userId = leftParts[1].trim();
+            // strip trailing comma if present (e.g., "controller,") without mutating the id variable used in lambdas
+            final String parsedUserId = userId.endsWith(",") ? userId.substring(0, userId.length() - 1).trim() : userId;
 
-            String left = parts[0];
-            String[] leftParts = left.split("\\s+");
-            if (leftParts.length < 3) throw new EntitlementException("invalid login");
-
-            String userId = leftParts[2].trim();
-            String pwPart = parts[1];
-            String[] rightParts = pwPart.split("\\s+");
-            String password = rightParts[rightParts.length-1].trim();
-
-            Optional<User> user = users.stream().filter(x -> x.getId().equals(userId)).findFirst();
-            if (!user.isPresent()) throw new AuthenticationException(userId);
+            Optional<User> user = users.stream().filter(x -> x.getId().equals(parsedUserId)).findFirst();
+            if (!user.isPresent()) throw new AuthenticationException(userId, "User not found");
 
             for (Credential credential : user.get().getCredentials()) {
-                if (credential.isPassword() && credential.isMatch(password)) {
+                if (credential.isPassword() && credential.isMatch(signInText)) {
                     AccessToken newToken = EntitlementServiceAbstractFactory.getInstance().createAccessToken(user.get(), credential);
                     accessTokens.add(newToken);
                     currentAccessToken = newToken;
@@ -343,19 +362,19 @@ public class EntitlementServiceApi {
                 }
             }
 
-            throw new AuthenticationException(userId);
+            throw new AuthenticationException(userId, "Admin Credential not found");
         }
 
         // voiceprint login: login voiceprint <voiceprint>
 
         if (commandText.contains("voiceprint")) {
-            String[] parts = commandText.split("\\s+");
-
-            String voice = parts[parts.length-1].trim();
+            int firstSpace = commandText.indexOf(' ');
+            if (firstSpace == -1) throw new EntitlementException("invalid login");
+            String signInText = commandText.substring(firstSpace + 1).trim();
 
             for (User user : users) {
                 for (Credential credential : user.getCredentials()) {
-                    if (!credential.isPassword() && credential.isMatch(voice)) {
+                    if (!credential.isPassword() && credential.isMatch(signInText)) {
                         AccessToken newToken = EntitlementServiceAbstractFactory.getInstance().createAccessToken(user, credential);
                         accessTokens.add(newToken);
                         currentAccessToken = newToken;
@@ -364,7 +383,7 @@ public class EntitlementServiceApi {
                 }
             }
 
-            throw new AuthenticationException("unknown");
+            throw new AuthenticationException("unknown", "Voiceprint Credential not found");
         }
 
         throw new EntitlementException("invalid login format");

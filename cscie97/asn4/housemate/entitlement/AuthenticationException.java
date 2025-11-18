@@ -11,8 +11,8 @@ public class AuthenticationException extends EntitlementException {
      *
      * @param user the user identifier
      */
-    public AuthenticationException(String user) {
-        super("Authentication failed for user: " + user);
+    public AuthenticationException(String user, String message) {
+        super("Authentication failed for user: " + user + " Reason: " + message);
         this.user = user;
     }
 
