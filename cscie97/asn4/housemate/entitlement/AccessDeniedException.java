@@ -21,6 +21,17 @@ public class AccessDeniedException extends EntitlementException {
         this.user = user;
     }
 
+    /**
+     * Get the identifier of the object the user attempted to access.
+     *
+     * @return the object identifier
+     */
     public String getObjectAttemptedToAccess() { return objectAttemptedToAccess; }
+
+    /**
+     * Get the identifier of the user who attempted access.
+     *
+     * @return the user identifier
+     */
     public String getUser() { return user; }
 }

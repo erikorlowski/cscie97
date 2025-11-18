@@ -39,7 +39,7 @@ public class EntitlementServiceApi {
      * @param commandText the full command text
      * @return the textual result or null for unrecognized commands
      */
-    public String executeCommand(String commandText) {
+    public String executeCommand(String commandText) throws EntitlementException {
         if (commandText == null) return null;
         String trimmed = commandText.trim();
         if (trimmed.isEmpty()) return null;
@@ -79,19 +79,11 @@ public class EntitlementServiceApi {
             case "add_resource_role_to_user":
                 return addResourceRoleToUser(trimmed);
             case "login":
-                try {
-                    return login(trimmed);
-                } catch (AuthenticationException e) {
-                    return "ERROR: " + e.getMessage();
-                }
+                return login(trimmed);
             case "logout":
                 return logout(trimmed);
             case "check_access":
-            try {
                 return checkAccess(trimmed);
-            } catch (AccessDeniedException e) {
-                return e.getMessage();
-            }
             case "inventory_entitlement_service":
                 return inventory();
             default:
@@ -123,10 +115,10 @@ public class EntitlementServiceApi {
      * @param commandText raw command text
      * @return result message
      */
-    private String definePermission(String commandText) {
+    private String definePermission(String commandText) throws EntitlementException {
         // format: define_permission, id, name, description
         String[] parts = commandText.split(",");
-        if (parts.length < 4) return "ERROR: invalid define_permission";
+        if (parts.length < 4) throw new EntitlementException("invalid define_permission");
         String id = parts[1].trim();
         String name = unquote(parts[2].trim());
         String desc = unquote(parts[3].trim());
@@ -142,9 +134,9 @@ public class EntitlementServiceApi {
      * @param commandText raw command text
      * @return result message
      */
-    private String defineRole(String commandText) {
+    private String defineRole(String commandText) throws EntitlementException {
         String[] parts = commandText.split(",");
-        if (parts.length < 4) return "ERROR: invalid define_role";
+        if (parts.length < 4) throw new EntitlementException("invalid define_role");
         String id = parts[1].trim();
         String name = unquote(parts[2].trim());
         String desc = unquote(parts[3].trim());
@@ -160,15 +152,15 @@ public class EntitlementServiceApi {
      * @param commandText raw command text
      * @return result message
      */
-    private String addEntitlementToRole(String commandText) {
+    private String addEntitlementToRole(String commandText) throws EntitlementException {
         String[] parts = commandText.split(",");
-        if (parts.length < 3) return "ERROR: invalid add_entitlement_to_role";
+        if (parts.length < 3) throw new EntitlementException("invalid add_entitlement_to_role");
         String roleId = parts[1].trim();
         String entId = parts[2].trim();
         Optional<Role> role = entitlements.stream().filter(e -> e instanceof Role && e.getId().equals(roleId)).map(e -> (Role)e).findFirst();
         Optional<Entitlement> ent = entitlements.stream().filter(e -> e.getId().equals(entId)).findFirst();
-        if (!role.isPresent()) return "ERROR: role not found";
-        if (!ent.isPresent()) return "ERROR: entitlement not found";
+        if (!role.isPresent()) throw new EntitlementException("role not found");
+        if (!ent.isPresent()) throw new EntitlementException("entitlement not found");
         role.get().addChild(ent.get());
         return "Added entitlement to role";
     }
@@ -179,9 +171,9 @@ public class EntitlementServiceApi {
      * @param commandText raw command text
      * @return result message
      */
-    private String createUser(String commandText) {
+    private String createUser(String commandText) throws EntitlementException {
         String[] parts = commandText.split(",");
-        if (parts.length < 3) return "ERROR: invalid create_user";
+        if (parts.length < 3) throw new EntitlementException("invalid create_user");
         String id = parts[1].trim();
         String name = unquote(parts[2].trim());
         User newUser = EntitlementServiceAbstractFactory.getInstance().createUser(id, name);
@@ -197,17 +189,17 @@ public class EntitlementServiceApi {
      * @param commandText raw command text
      * @return result message
      */
-    private String addUserCredential(String commandText) {
+    private String addUserCredential(String commandText) throws EntitlementException {
         String[] parts = commandText.split(",");
-        if (parts.length < 4) return "ERROR: invalid add_user_credential";
+        if (parts.length < 4) throw new EntitlementException("invalid add_user_credential");
         String userId = parts[1].trim();
         String type = parts[2].trim();
         String value = parts[3].trim();
         Optional<User> u = users.stream().filter(x -> x.getId().equals(userId)).findFirst();
-        if (!u.isPresent()) return "ERROR: user not found";
+        if (!u.isPresent()) throw new EntitlementException("user not found");
         String typeLower = type.toLowerCase();
         if (!"password".equals(typeLower) && !"voice_print".equals(typeLower) && !"voiceprint".equals(typeLower)) {
-            return "ERROR: invalid credential type";
+            throw new EntitlementException("invalid credential type");
         }
         boolean isPassword = "password".equals(typeLower);
         Credential newCredential = EntitlementServiceAbstractFactory.getInstance().createCredential(userId, isPassword, value);
@@ -221,15 +213,15 @@ public class EntitlementServiceApi {
      * @param commandText raw command text
      * @return result message
      */
-    private String addRoleToUser(String commandText) {
+    private String addRoleToUser(String commandText) throws EntitlementException {
         String[] parts = commandText.split(",");
-        if (parts.length < 3) return "ERROR: invalid add_role_to_user";
+        if (parts.length < 3) throw new EntitlementException("invalid add_role_to_user");
         String userId = parts[1].trim();
         String roleId = parts[2].trim();
         Optional<User> user = users.stream().filter(x -> x.getId().equals(userId)).findFirst();
         Optional<Entitlement> role = entitlements.stream().filter(e -> e.getId().equals(roleId)).findFirst();
-        if (!user.isPresent()) return "ERROR: user not found";
-        if (!role.isPresent() || !(role.get() instanceof Role)) return "ERROR: role not found";
+        if (!user.isPresent()) throw new EntitlementException("user not found");
+        if (!role.isPresent() || !(role.get() instanceof Role)) throw new EntitlementException("role not found");
         user.get().addEntitlement(role.get());
         return "Added role " + role.get().getName() + " to user " + user.get().getName();
     }
@@ -241,9 +233,9 @@ public class EntitlementServiceApi {
      * @param commandText raw command text
      * @return result message
      */
-    private String createResourceRole(String commandText) {
+    private String createResourceRole(String commandText) throws EntitlementException {
         String[] parts = commandText.split(",");
-        if (parts.length < 4) return "ERROR: invalid create_resource_role";
+        if (parts.length < 4) throw new EntitlementException("invalid create_resource_role");
         String name = parts[1].trim();
         String roleId = parts[2].trim();
         String resourceName = parts[3].trim();
@@ -253,7 +245,7 @@ public class EntitlementServiceApi {
             resources.add(newResource);
             return newResource;
         });
-        if (!role.isPresent()) return "ERROR: role not found";
+        if (!role.isPresent()) throw new EntitlementException("role not found");
         ResourceRole newResourceRole = EntitlementServiceAbstractFactory.getInstance().createResourceRole(name, role.get(), resource);
         resourceRoles.add(newResourceRole);
         return "Created resource role " + name;
@@ -266,15 +258,15 @@ public class EntitlementServiceApi {
      * @param commandText raw command text
      * @return result message
      */
-    private String addResourceRoleToUser(String commandText) {
+    private String addResourceRoleToUser(String commandText) throws EntitlementException {
         String[] parts = commandText.split(",");
-        if (parts.length < 3) return "ERROR: invalid add_resource_role_to_user";
+        if (parts.length < 3) throw new EntitlementException("invalid add_resource_role_to_user");
         String userId = parts[1].trim();
         String resourceRoleName = parts[2].trim();
         Optional<User> user = users.stream().filter(x -> x.getId().equals(userId)).findFirst();
         Optional<ResourceRole> resourceRole = resourceRoles.stream().filter(x -> x.getName().equals(resourceRoleName)).findFirst();
-        if (!user.isPresent()) return "ERROR: user not found";
-        if (!resourceRole.isPresent()) return "ERROR: resource role not found";
+        if (!user.isPresent()) throw new EntitlementException("user not found");
+        if (!resourceRole.isPresent()) throw new EntitlementException("resource role not found");
         user.get().addResourceRole(resourceRole.get());
         return "Added resource role to user";
     }
@@ -288,18 +280,18 @@ public class EntitlementServiceApi {
      * @return token string on success
      * @throws AuthenticationException when authentication fails
      */
-    private String login(String commandText) throws AuthenticationException {
+    private String login(String commandText) throws AuthenticationException, EntitlementException {
         // supports: login user <userId>, password <password>
 
         if (commandText.contains("password")) {
             String[] parts = commandText.split(",");
 
             // parts: "login user <id>", " password <pw>"
-            if (parts.length < 2) return "ERROR: invalid login";
+            if (parts.length < 2) throw new EntitlementException("invalid login");
 
             String left = parts[0];
             String[] leftParts = left.split("\\s+");
-            if (leftParts.length < 3) return "ERROR: invalid login";
+            if (leftParts.length < 3) throw new EntitlementException("invalid login");
 
             String userId = leftParts[2].trim();
             String pwPart = parts[1];
@@ -340,7 +332,7 @@ public class EntitlementServiceApi {
             throw new AuthenticationException("unknown");
         }
 
-        return "ERROR: invalid login format";
+        throw new EntitlementException("invalid login format");
     }
 
     /**
@@ -349,12 +341,12 @@ public class EntitlementServiceApi {
      * @param commandText raw command text containing the token
      * @return result message
      */
-    private String logout(String commandText) {
+    private String logout(String commandText) throws EntitlementException {
         String[] parts = commandText.split("\\s+");
-        if (parts.length < 2) return "ERROR: invalid logout";
+        if (parts.length < 2) throw new EntitlementException("invalid logout");
         String tokenStr = parts[1].trim();
         Optional<AccessToken> t = accessTokens.stream().filter(x -> new String(x.getToken()).equals(tokenStr)).findFirst();
-        if (!t.isPresent()) return "ERROR: token not found";
+        if (!t.isPresent()) throw new EntitlementException("token not found");
         accessTokens.remove(t.get());
         return "Logged out";
     }
@@ -368,10 +360,10 @@ public class EntitlementServiceApi {
      * @return "Access Granted" when access is allowed
      * @throws AccessDeniedException when access is denied
      */
-    private String checkAccess(String commandText) throws AccessDeniedException {
+    private String checkAccess(String commandText) throws AccessDeniedException, EntitlementException {
         // check_access <auth_token>, <permission>, <resource>
         String[] parts = commandText.split(",");
-        if (parts.length < 3) return "ERROR: invalid check_access";
+        if (parts.length < 3) throw new EntitlementException("invalid check_access");
         String tokenStr = parts[0].substring(parts[0].indexOf(" ")+1).trim();
         String permissionId = parts[1].trim();
         String resourceName = parts[2].trim();
@@ -380,7 +372,7 @@ public class EntitlementServiceApi {
         AccessToken token = accessToken.get();
         // find permission
         Optional<Permission> permission = entitlements.stream().filter(e -> e instanceof Permission && e.getId().equals(permissionId)).map(e -> (Permission)e).findFirst();
-        if (!permission.isPresent()) return "Access Denied: permission not found";
+        if (!permission.isPresent()) throw new EntitlementException("permission not found");
         Resource resource = resources.stream().filter(r -> r.getName().equals(resourceName)).findFirst().orElseGet(() -> {
             Resource rNew = EntitlementServiceAbstractFactory.getInstance().createResource(resourceName);
             resources.add(rNew);

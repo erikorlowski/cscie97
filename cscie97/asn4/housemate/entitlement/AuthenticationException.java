@@ -16,5 +16,9 @@ public class AuthenticationException extends EntitlementException {
         this.user = user;
     }
 
+    /**
+     * Get the identifier of the user for whom authentication failed.
+     * @return the user identifier
+     */
     public String getUser() { return user; }
 }

@@ -16,5 +16,10 @@ public class InvalidAccessTokenException extends EntitlementException {
         this.accessToken = accessToken;
     }
 
+    /**
+     * Get the invalid access token.
+     *
+     * @return the invalid access token
+     */
     public char[] getAccessToken() { return accessToken; }
 }
