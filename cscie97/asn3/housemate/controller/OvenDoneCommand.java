@@ -34,7 +34,7 @@ public class OvenDoneCommand implements Command {
         ModelServiceApi modelServiceApi = ModelServiceApiImpl.getInstance();
 
     // Turn oven off. Use current entitlement token.
-    long token = cscie97.asn4.housemate.entitlement.EntitlementServiceApi.getInstance().getCurrentAccessToken();
+    long token = ControllerServiceApi.getInstance().getControllerAccessToken();
     modelServiceApi.executeCommand("set appliance " + fullyQualifiedOvenName + " status power value OFF", token);
 
         int colonIndex = fullyQualifiedOvenName.indexOf(':');

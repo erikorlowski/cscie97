@@ -37,7 +37,7 @@ public class FireCommand implements Command {
      * @param originatingRoom The room where the fire is detected
      */
     private void setAvaAlerts(String originatingHouse, String originatingRoom) {
-        long token = cscie97.asn4.housemate.entitlement.EntitlementServiceApi.getInstance().getCurrentAccessToken();
+        long token = ControllerServiceApi.getInstance().getControllerAccessToken();
         String houseConfiguration = ModelServiceApiImpl.getInstance()
             .executeCommand("show configuration " + originatingHouse, token);
 
