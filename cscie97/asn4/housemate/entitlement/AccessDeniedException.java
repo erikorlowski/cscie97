@@ -4,7 +4,7 @@ package cscie97.asn4.housemate.entitlement;
  * Exception thrown when a user attempts to access an object without the
  * required permissions.
  */
-public class AccessDeniedException extends Exception {
+public class AccessDeniedException extends EntitlementException {
     private final String objectAttemptedToAccess;
     private final String user;
 

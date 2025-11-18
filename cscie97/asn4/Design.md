@@ -463,15 +463,19 @@ package cscie97.asn4.housemate.entitlement {
     Visitable --> Visitor
     EntitlementServiceAbstractFactory --> Visitable
     EntitlementServiceApi --> Visitable
-    EntitlementServiceApi --> InvalidAccessTokenException
-    EntitlementServiceApi --> AccessDeniedException
-    EntitlementServiceApi --> AuthenticationException
+    EntitlementServiceApi --> EntitlementException
+    EntitlementException <|-- InvalidAccessTokenException
+    EntitlementException <|-- AccessDeniedException
+    EntitlementException <|-- AuthenticationException
     User "1" *-- "*" Credential
     User "1" --o "1" AccessToken
     AccessToken "1" o-- "1" Credential
     User "*" --o "*" Entitlement
     User "*" --o "*" ResourceRole
 
+    class EntitlementException {
+        - String message
+    }
 
     class InvalidAccessTokenException {
         - char[] accessToken
@@ -483,7 +487,7 @@ package cscie97.asn4.housemate.entitlement {
     }
 
     class AuthenticationException {
-        - String message
+        
     }
 }
 
@@ -698,6 +702,14 @@ The AccessToken class represents an authenticated session with the Housemate Ent
 | credential | Credential | The Credential used to create this AccessToken. |
 | user | User | The User associated with this AccessToken. |
 
+### EntitlementException
+EntitlementException is the base exception that is thrown by the Housemate Exception Service to catch and report issues that weren't caught by any of the subclass exceptions.
+
+#### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| message | String | A message explaining the failure. |
+
 ### InvalidAccessTokenException
 An InvalidAccessTokenException is thrown whever the Housemate Entitlement Service attempts to use an expired of logged out AccessKey.
 
@@ -718,11 +730,6 @@ The AccessDeniedException is thrown when an attenpt to antthing without acess.
 ### AuthenticationException
 An AuthenticationException is thrown when a login attempt fails.
 
-#### Properties
-| Property Name | Type | Description |
-|--|--|--|
-| message | String | A message explaining the authentication failure. |
-
 ## Implementation Details
 Below is a detailed view of the interactions between the Housemate Entitlement Service, Housemate Controller Service and Housemate Model Service for typical useage of the Housemate system.
 
@@ -741,7 +748,6 @@ participant AdminUser as "User : adminUser"
 participant AdminCredential as "Credential : adminCredential"
 participant AdminAccessToken as "AccessToken : adminAccessToken"
 participant Role as "Role : adultRole"
-participant Resource as "Resource : house1"
 participant ResourceRole as "ResourceRole : adultHouse1"
 participant Permission as "Permission : controlLights"
 
@@ -779,8 +785,6 @@ Entitlement --> Model
 Admin -> CommandInterface : add occupant John to house House1
 CommandInterface -> Model : executeCommand("add occupant John to house House1")
 Model -> Entitlement : executeCommand("create_resource_role house1Adult, adult_user, House1")
-Entitlement -> Factory : createResource("House1")
-Factory -> Resource : new Resource("House1")
 Entitlement -> Factory : createResourceRole("House1Adult", adultRole, house1)
 Factory -> ResourceRole : new ResourceRole("House1Adult", adultRole, house1)
 User -> CommandInterface : set appliance House1:Kitchen:Ava status voiceprint value --John--

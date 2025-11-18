@@ -3,7 +3,7 @@ package cscie97.asn4.housemate.entitlement;
 /**
  * Exception thrown when an access token cannot be resolved or is invalid.
  */
-public class InvalidAccessTokenException extends Exception {
+public class InvalidAccessTokenException extends EntitlementException {
     private final char[] accessToken;
 
     /**

@@ -3,7 +3,7 @@ package cscie97.asn4.housemate.entitlement;
 /**
  * Exception thrown when authentication fails for a given user.
  */
-public class AuthenticationException extends Exception {
+public class AuthenticationException extends EntitlementException {
     private final String user;
 
     /**
