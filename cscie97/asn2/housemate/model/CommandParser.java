@@ -439,9 +439,11 @@ class CommandParser {
             }
 
             try {
-                EntitlementServiceApi.getInstance().executeCommand("check_access " + Long.toString(accessToken) + ", set_status, " + houseName + ", " + roomName + ", " + deviceName);
+                String permissionName = "control_" + device.getType().toLowerCase();
+                EntitlementServiceApi.getInstance().executeCommand("check_access " + Long.toString(accessToken) + ", " + permissionName +", " + ModelServiceApiImpl.getInstance().modelFullyQualifiedNameToControllerFullyQualifiedName(device.getFullyQualifiedName()));
             } catch (EntitlementException e) {
-                throw new IllegalArgumentException("Access denied: " + e.getMessage());
+                System.out.println("Access denied: " + e.getMessage());
+                return;
             }
 
             device.setStatus(status, value);
@@ -473,6 +475,14 @@ class CommandParser {
 
                 if (device == null) {
                     throw new IllegalArgumentException("Device not found for set command: " + this.scriptLineText);
+                }
+                
+                try {
+                    String permissionName = "control_" + device.getType().toLowerCase();
+                    EntitlementServiceApi.getInstance().executeCommand("check_access " + Long.toString(accessToken) + ", " + permissionName +", " + ModelServiceApiImpl.getInstance().modelFullyQualifiedNameToControllerFullyQualifiedName(device.getFullyQualifiedName()));
+                } catch (EntitlementException e) {
+                    System.out.println("Access denied: " + e.getMessage());
+                    return;
                 }
 
                 device.setStatus(status, "active");
@@ -521,7 +531,15 @@ class CommandParser {
                 throw new IllegalArgumentException("Object is not configurable for show configuration command: " + this.scriptLineText);
             }
 
-                    return obj.getConfiguration();
+            try {
+                String permissionName = "view_configuration";
+                EntitlementServiceApi.getInstance().executeCommand("check_access " + Long.toString(accessToken) + ", " + permissionName +", " + name);
+            } catch (EntitlementException e) {
+                System.out.println("Access denied: " + e.getMessage());
+                return "Access denied: " + e.getMessage();
+            }
+
+            return obj.getConfiguration();
         } else if(remainingText.trim().isEmpty()) {
             // Show configuration for all houses
             StringBuilder sb = new StringBuilder();
@@ -531,6 +549,15 @@ class CommandParser {
                     sb.append(System.lineSeparator()).append(((House) modelObject).getConfiguration());
                 }
             }
+
+            try {
+                String permissionName = "view_configuration";
+                EntitlementServiceApi.getInstance().executeCommand("check_access " + Long.toString(accessToken) + ", " + permissionName +", " + "all_houses");
+            } catch (EntitlementException e) {
+                System.out.println("Access denied: " + e.getMessage());
+                return "Access denied: " + e.getMessage();
+            }
+
             return sb.toString();
         } else {
             throw new IllegalArgumentException("Invalid show configuration command: " + this.scriptLineText);
@@ -571,6 +598,14 @@ class CommandParser {
                     throw new IllegalArgumentException("Object is not energy-readable for show energy-use command: " + this.scriptLineText);
             }
 
+            try {
+                String permissionName = "view_energy";
+                EntitlementServiceApi.getInstance().executeCommand("check_access " + Long.toString(accessToken) + ", " + permissionName +", " + name);
+            } catch (EntitlementException e) {
+                System.out.println("Access denied: " + e.getMessage());
+                return "Access denied: " + e.getMessage();
+            }
+
             return ((ModelObject) obj).getName() + " energy use: " + obj.getEnergyConsumptionWatts();
         } else if(remainingText.trim().isEmpty()) {
             // Show energy use for all houses
@@ -580,6 +615,15 @@ class CommandParser {
                     totalEnergyUse += ((House) modelObject).getEnergyConsumptionWatts();
                 }
             }
+
+            try {
+                String permissionName = "view_configuration";
+                EntitlementServiceApi.getInstance().executeCommand("check_access " + Long.toString(accessToken) + ", " + permissionName +", " + "all_houses");
+            } catch (EntitlementException e) {
+                System.out.println("Access denied: " + e.getMessage());
+                return "Access denied: " + e.getMessage();
+            }
+
             return "Total energy use for all houses: " + totalEnergyUse;
         } else {
             throw new IllegalArgumentException("Invalid show energy-use command: " + this.scriptLineText);
@@ -625,6 +669,17 @@ class CommandParser {
 
             String statusValue = obj.getStatus(statusName);
             if(statusValue != null) {
+
+                try {
+                    Device device = (Device) obj;
+
+                    String permissionName = "view_" + device.getType().toLowerCase();
+                    EntitlementServiceApi.getInstance().executeCommand("check_access " + Long.toString(accessToken) + ", " + permissionName +", " + ModelServiceApiImpl.getInstance().modelFullyQualifiedNameToControllerFullyQualifiedName(device.getFullyQualifiedName()));
+                } catch (EntitlementException e) {
+                    System.out.println("Access denied: " + e.getMessage());
+                    return "Access denied: " + e.getMessage();
+                }
+
                 return obj.getName() + " status " + statusName + ": " + statusValue;
             } else {
                         throw new IllegalArgumentException("Status " + statusName + " not found for device " + obj.getName() + " in command: " + this.scriptLineText);
@@ -648,6 +703,16 @@ class CommandParser {
                     }
                 } else {
                     throw new IllegalArgumentException("Invalid object name for show device command: " + this.scriptLineText);
+                }
+
+                try {
+                    Device device = (Device) obj;
+
+                    String permissionName = "view_" + device.getType().toLowerCase();
+                    EntitlementServiceApi.getInstance().executeCommand("check_access " + Long.toString(accessToken) + ", " + permissionName +", " + ModelServiceApiImpl.getInstance().modelFullyQualifiedNameToControllerFullyQualifiedName(device.getFullyQualifiedName()));
+                } catch (EntitlementException e) {
+                    System.out.println("Access denied: " + e.getMessage());
+                    return "Access denied: " + e.getMessage();
                 }
 
                 return obj.getName() + " statuses: " + obj.getStatuses();

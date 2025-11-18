@@ -137,7 +137,7 @@ public class ModelServiceApiImpl implements ModelServiceApi {
         }
     }
 
-    private String modelFullyQualifiedNameToControllerFullyQualifiedName(String modelFQN) {
+    String modelFullyQualifiedNameToControllerFullyQualifiedName(String modelFQN) {
         if (modelFQN == null) {
             return null;
         }
