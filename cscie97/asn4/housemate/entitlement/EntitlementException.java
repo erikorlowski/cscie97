@@ -4,7 +4,7 @@ package cscie97.asn4.housemate.entitlement;
  * Base unchecked exception for the entitlement subsystem. Other entitlement
  * related exceptions extend this to provide a common supertype.
  */
-public class EntitlementException extends RuntimeException {
+public class EntitlementException extends Exception {
     private static final String PREFIX = "Entitlement Service Exception: ";
 
     /**

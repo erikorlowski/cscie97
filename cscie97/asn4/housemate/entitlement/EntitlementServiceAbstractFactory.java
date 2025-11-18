@@ -96,7 +96,8 @@ public class EntitlementServiceAbstractFactory {
      * @return a new AccessToken instance
      */
     public AccessToken createAccessToken(User user, Credential credential) {
-        char[] token = Long.toHexString(System.nanoTime()).toCharArray();
-        return new AccessToken(token, user, credential);
+        java.security.SecureRandom rnd = new java.security.SecureRandom();
+    long tokenLong = rnd.nextLong() & Long.MAX_VALUE;
+    return new AccessToken(tokenLong, user, credential);
     }
 }

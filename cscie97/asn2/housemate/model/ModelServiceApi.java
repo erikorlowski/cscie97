@@ -10,9 +10,9 @@ public interface ModelServiceApi {
      * Execute a script file to configure the model service.
      *
      * @param commandText the command text to execute
-     * @param authenticationKey the authentication key for executing the command
+     * @param accessToken the authentication key for executing the command
      */
-    String executeCommand(String commandText, char[] authenticationKey);
+    String executeCommand(String commandText, long accessToken);
 
     /**
      * Attach a status observer to the model service.

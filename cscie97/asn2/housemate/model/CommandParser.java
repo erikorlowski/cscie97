@@ -3,6 +3,9 @@ package cscie97.asn2.housemate.model;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import cscie97.asn4.housemate.entitlement.EntitlementException;
+import cscie97.asn4.housemate.entitlement.EntitlementServiceApi;
+
 /**
  * Parses a single line of the housemate script and dispatches to the appropriate
  * handler for commands such as "define", "add occupant", "set", and "show".
@@ -44,7 +47,7 @@ class CommandParser {
      * @param scriptLineText the single script line to execute
      * @return the output produced by the command, or null if none
      */
-    String executeCommand(String scriptLineText) {
+    String executeCommand(String scriptLineText, long accessToken) {
 
         if (scriptLineText != null && !scriptLineText.isEmpty() && (scriptLineText.charAt(0) == '\uFEFF' || (int) scriptLineText.charAt(0) == 239)) {
             // Remove BOM if present
@@ -83,7 +86,7 @@ class CommandParser {
             m = p.matcher(scriptLineText);
             if (m.find()) {
                 String remaining = m.group(2).trim();
-                setValue(remaining);
+                setValue(remaining, accessToken);
                 return null;
             }
 
@@ -91,28 +94,28 @@ class CommandParser {
             m = p.matcher(scriptLineText);
             if (m.find()) {
                 String remaining = m.group(1).trim();
-                return showDevice(remaining);
+                return showDevice(remaining, accessToken);
             }
 
             p = Pattern.compile("^\\s*show\\s*appliance\\b(.*)$", Pattern.CASE_INSENSITIVE);
             m = p.matcher(scriptLineText);
             if (m.find()) {
                 String remaining = m.group(1).trim();
-                return showDevice(remaining);
+                return showDevice(remaining, accessToken);
             }
 
             p = Pattern.compile("^\\s*show\\s*configuration\\b(.*)$", Pattern.CASE_INSENSITIVE);
             m = p.matcher(scriptLineText);
             if (m.find()) {
                 String remaining = m.group(1).trim();
-                return showConfiguration(remaining);
+                return showConfiguration(remaining, accessToken);
             }
 
             p = Pattern.compile("^\\s*show\\s*energy-use\\b(.*)$", Pattern.CASE_INSENSITIVE);
             m = p.matcher(scriptLineText);
             if (m.find()) {
                 String remaining = m.group(1).trim();
-                return showEnergyUse(remaining);
+                return showEnergyUse(remaining, accessToken);
             }
 
             throw new IllegalArgumentException("Unrecognized command: " + scriptLineText);
@@ -240,8 +243,15 @@ class CommandParser {
             Occupant newOccupant = new Occupant("occupant_" + name, occupantType);
 
             ModelServiceApiImpl.getInstance().addModelObject(newOccupant);
-            } else {
-                throw new IllegalArgumentException("Invalid occupant definition: " + this.scriptLineText);
+
+            try {
+                EntitlementServiceApi.getInstance().executeCommand("create_user " + newOccupant.getName() + ", " + newOccupant.getName());
+                EntitlementServiceApi.getInstance().executeCommand("add_user_credential " + newOccupant.getName() + " voice_print --" + newOccupant.getName() + "--");
+            } catch (EntitlementException e) {
+                throw new IllegalArgumentException("Failed to create Entitlement user for occupant at: " + this.scriptLineText + " Cause: " + e.getMessage());
+            }
+        } else {
+            throw new IllegalArgumentException("Invalid occupant definition: " + this.scriptLineText);
         }
     }
 
@@ -372,6 +382,13 @@ class CommandParser {
             }
 
             ModelServiceApiImpl.getInstance().addOwnership(house, occupant);
+
+            try {
+                EntitlementServiceApi.getInstance().executeCommand("create_resource_role " + house.getName() + occupant.getType().toString() + ", " + occupant.getType() + "_role" + ", " + house.getName());
+                EntitlementServiceApi.getInstance().executeCommand("add_resource_role_to_user " + occupant.getName() + ", " + house.getName() + occupant.getType().toString());
+            } catch (EntitlementException e) {
+                throw new IllegalArgumentException("Failed to create Entitlement user for occupant at: " + this.scriptLineText + " Cause: " + e.getMessage());
+            }
         } else {
             throw new IllegalArgumentException("Invalid add occupant command: " + this.scriptLineText);
         }
@@ -381,9 +398,10 @@ class CommandParser {
      * Handle "set ..." commands to update a device status/value.
      *
      * @param remainingText the text following the "set" token
+     * @param accessToken the authentication key for executing commands
      * @throws IllegalArgumentException if parsing fails, numbers are invalid, or referenced objects are not found
      */
-    private void setValue(String remainingText) {
+    private void setValue(String remainingText, long accessToken) {
         String deviceName = null;
         String status = null;
         String roomName = null;
@@ -418,6 +436,12 @@ class CommandParser {
 
             if (device == null) {
                 throw new IllegalArgumentException("Device not found for set command: " + this.scriptLineText);
+            }
+
+            try {
+                EntitlementServiceApi.getInstance().executeCommand("check_access " + Long.toString(accessToken) + ", set_status, " + houseName + ", " + roomName + ", " + deviceName);
+            } catch (EntitlementException e) {
+                throw new IllegalArgumentException("Access denied: " + e.getMessage());
             }
 
             device.setStatus(status, value);
@@ -466,7 +490,7 @@ class CommandParser {
      * @param remainingText the text following the "show configuration" token (may be empty)
      * @throws IllegalArgumentException if parsing fails or the named object is not found/appropriate
      */
-    private String showConfiguration(String remainingText) {
+    private String showConfiguration(String remainingText, long accessToken) {
         String name = null;
         Configurable obj = null;
 
@@ -497,7 +521,7 @@ class CommandParser {
                 throw new IllegalArgumentException("Object is not configurable for show configuration command: " + this.scriptLineText);
             }
 
-            return obj.getConfiguration();
+                    return obj.getConfiguration();
         } else if(remainingText.trim().isEmpty()) {
             // Show configuration for all houses
             StringBuilder sb = new StringBuilder();
@@ -520,7 +544,7 @@ class CommandParser {
      * @param remainingText the text following the "show energy-use" token (may be empty)
      * @throws IllegalArgumentException if parsing fails or the named object is not energy-readable
      */
-    private String showEnergyUse(String remainingText) {
+    private String showEnergyUse(String remainingText, long accessToken) {
         String name = null;
         EnergyReadable obj = null;
 
@@ -569,7 +593,7 @@ class CommandParser {
      * @param remainingText the text following the "show sensor|appliance" token
      * @throws IllegalArgumentException if parsing fails, the device is not found, or a requested status is missing
      */
-    private String showDevice(String remainingText) {
+    private String showDevice(String remainingText, long accessToken) {
         String name = null;
         Device obj = null;
 

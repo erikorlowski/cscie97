@@ -19,6 +19,8 @@ public class EntitlementServiceApi {
     private final Set<ResourceRole> resourceRoles = new HashSet<>();
     private final Set<Resource> resources = new HashSet<>();
 
+    private AccessToken currentAccessToken;
+
     private EntitlementServiceApi() {}
 
     /**
@@ -61,6 +63,26 @@ public class EntitlementServiceApi {
         }
         primary = lower.substring(0, endIdx).trim();
 
+        // Commands that do not require an admin to be logged in:
+        // create_user, add_user_credential, login, logout, check_access
+        if (!"create_user".equals(primary)
+                && !"add_user_credential".equals(primary)
+                && !"login".equals(primary)
+                && !"logout".equals(primary)
+                && !"check_access".equals(primary)) {
+            boolean adminFound = false;
+            for (AccessToken t : accessTokens) {
+                if (t.isAdmin() && !t.isExpired()) {
+                    adminFound = true;
+                    break;
+                }
+            }
+            if (!adminFound) {
+                // No admin currently logged in with a valid token
+                throw new AccessDeniedException(primary, "unknown");
+            }
+        }
+
     switch (primary) {
             case "define_permission":
                 return definePermission(trimmed);
@@ -89,6 +111,17 @@ public class EntitlementServiceApi {
             default:
                 return null;
         }
+    }
+
+    /**
+     * Gets the most recently created access token as a numeric long.
+     * Returns 0 if no token currently exists.
+     *
+     * @return the token as long, or 0 when none available
+     */
+    public long getCurrentAccessToken() {
+        if (currentAccessToken == null) return 0L;
+        return currentAccessToken.getToken();
     }
 
     /**
@@ -303,9 +336,10 @@ public class EntitlementServiceApi {
 
             for (Credential credential : user.get().getCredentials()) {
                 if (credential.isPassword() && credential.isMatch(password)) {
-                    AccessToken t = EntitlementServiceAbstractFactory.getInstance().createAccessToken(user.get(), credential);
-                    accessTokens.add(t);
-                    return new String(t.getToken());
+                    AccessToken newToken = EntitlementServiceAbstractFactory.getInstance().createAccessToken(user.get(), credential);
+                    accessTokens.add(newToken);
+                    currentAccessToken = newToken;
+                    return Long.toString(newToken.getToken());
                 }
             }
 
@@ -322,9 +356,10 @@ public class EntitlementServiceApi {
             for (User user : users) {
                 for (Credential credential : user.getCredentials()) {
                     if (!credential.isPassword() && credential.isMatch(voice)) {
-                        AccessToken t = EntitlementServiceAbstractFactory.getInstance().createAccessToken(user, credential);
-                        accessTokens.add(t);
-                        return new String(t.getToken());
+            AccessToken newToken = EntitlementServiceAbstractFactory.getInstance().createAccessToken(user, credential);
+            accessTokens.add(newToken);
+            currentAccessToken = newToken;
+            return Long.toString(newToken.getToken());
                     }
                 }
             }
@@ -345,7 +380,13 @@ public class EntitlementServiceApi {
         String[] parts = commandText.split("\\s+");
         if (parts.length < 2) throw new EntitlementException("invalid logout");
         String tokenStr = parts[1].trim();
-        Optional<AccessToken> t = accessTokens.stream().filter(x -> new String(x.getToken()).equals(tokenStr)).findFirst();
+        long tokenLong;
+        try {
+            tokenLong = Long.parseLong(tokenStr);
+        } catch (NumberFormatException e) {
+            throw new EntitlementException("invalid token");
+        }
+        Optional<AccessToken> t = accessTokens.stream().filter(x -> x.getToken() == tokenLong).findFirst();
         if (!t.isPresent()) throw new EntitlementException("token not found");
         accessTokens.remove(t.get());
         return "Logged out";
@@ -367,7 +408,13 @@ public class EntitlementServiceApi {
         String tokenStr = parts[0].substring(parts[0].indexOf(" ")+1).trim();
         String permissionId = parts[1].trim();
         String resourceName = parts[2].trim();
-        Optional<AccessToken> accessToken = accessTokens.stream().filter(x -> new String(x.getToken()).equals(tokenStr)).findFirst();
+        long tokenLong;
+        try {
+            tokenLong = Long.parseLong(tokenStr);
+        } catch (NumberFormatException e) {
+            throw new EntitlementException("invalid token");
+        }
+        Optional<AccessToken> accessToken = accessTokens.stream().filter(x -> x.getToken() == tokenLong).findFirst();
         if (!accessToken.isPresent()) throw new AccessDeniedException(permissionId, resourceName);
         AccessToken token = accessToken.get();
         // find permission

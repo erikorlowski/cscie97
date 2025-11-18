@@ -12,7 +12,7 @@ public class AccessToken implements Visitable {
      */
     public static final long TIMEOUT_LENGTH = 60L * 60L * 1000L;
 
-    private final char[] token;
+    private final long token;
     private final Credential credential;
     private final User user;
     private final boolean isAdmin;
@@ -25,7 +25,7 @@ public class AccessToken implements Visitable {
      * @param user the user associated with the token
      * @param credential the credential used to authenticate
      */
-    public AccessToken(char[] token, User user, Credential credential) {
+    public AccessToken(long token, User user, Credential credential) {
         this.token = token;
         this.user = user;
         this.credential = credential;
@@ -33,7 +33,7 @@ public class AccessToken implements Visitable {
         this.lastUsedTimeMsecs = System.currentTimeMillis();
     }
 
-    public char[] getToken() { return token; }
+    public long getToken() { return token; }
     public Credential getCredential() { return credential; }
     public User getUser() { return user; }
     public boolean isAdmin() { return isAdmin; }

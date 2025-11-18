@@ -33,7 +33,8 @@ public class ApplicationTypeCommand implements Command {
             StringBuilder result = new StringBuilder();
             for (String appliance : appliances) {
                 String command = String.format("set appliance %s status %s value %s", appliance, statusName, newValue);
-                modelService.executeCommand(command, new char[] {'a', 'd', 'm', 'i', 'n'});
+                long token = cscie97.asn4.housemate.entitlement.EntitlementServiceApi.getInstance().getCurrentAccessToken();
+                modelService.executeCommand(command, token);
                 result.append(String.format("Set %s status %s to %s%n", appliance, statusName, newValue));
             }
             return result.toString().trim();
@@ -43,8 +44,9 @@ public class ApplicationTypeCommand implements Command {
     private ArrayList<String> getRelevantAppliances(String fullyQualifiedContainerName, String applianceType) {
         ArrayList<String> appliances = new ArrayList<>();
         
-        ModelServiceApi modelService = ModelServiceApiImpl.getInstance();
-        String containerConfiguration = modelService.executeCommand("show configuration " + fullyQualifiedContainerName, new char[] {'a', 'd', 'm', 'i', 'n'});
+    ModelServiceApi modelService = ModelServiceApiImpl.getInstance();
+    long token = cscie97.asn4.housemate.entitlement.EntitlementServiceApi.getInstance().getCurrentAccessToken();
+    String containerConfiguration = modelService.executeCommand("show configuration " + fullyQualifiedContainerName, token);
         boolean containerIsHouse = true;
         String house = fullyQualifiedContainerName;
         String room = null;

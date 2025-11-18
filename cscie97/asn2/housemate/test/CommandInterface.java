@@ -3,6 +3,7 @@ package cscie97.asn2.housemate.test;
 import cscie97.asn2.housemate.model.ModelServiceApi;
 import cscie97.asn2.housemate.model.ModelServiceApiImpl;
 import cscie97.asn3.housemate.controller.ControllerServiceApi;
+import cscie97.asn4.housemate.entitlement.EntitlementServiceApi;
 
 /**
  * Test driver for the HouseMate system.
@@ -29,7 +30,18 @@ public class CommandInterface {
                 if (line.isEmpty()) {
                     continue;
                 }
-                String output = modelService.executeCommand(line, new char[] {'a','d','m','i','n'});
+                String output;
+                try {
+                    output = EntitlementServiceApi.getInstance().executeCommand(line);
+                } catch (Exception e) {
+                    output = "Entitlement Service Error: " + e.getMessage();
+                    continue;
+                }
+                if(output == null) {
+                    long tokenLong = EntitlementServiceApi.getInstance().getCurrentAccessToken();
+                    output = modelService.executeCommand(line, tokenLong);
+                }
+                
                 if (output != null && !output.isEmpty()) {
                     System.out.println(output);
                 }

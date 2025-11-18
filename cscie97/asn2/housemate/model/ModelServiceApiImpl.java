@@ -82,15 +82,15 @@ public class ModelServiceApiImpl implements ModelServiceApi {
      * Execute a command by reading each line and passing it to the CommandParser.
      *
      * @param commandText the command text to execute
-     * @param authenticationKey the authentication key for executing commands
+     * @param accessToken the authentication key for executing commands
      * @throws IllegalArgumentException if the command cannot be executed
      *
      * @return the output of the command execution, or null if it failed
      */
     @Override
-    public String executeCommand(String commandText, char[] authenticationKey) {
+    public String executeCommand(String commandText, long accessToken) {
         try {
-            String output = CommandParser.getInstance().executeCommand(commandText);
+            String output = CommandParser.getInstance().executeCommand(commandText, accessToken);
             return output;
         } catch (IllegalArgumentException e) {
             System.out.println(e.getMessage());
@@ -98,6 +98,8 @@ public class ModelServiceApiImpl implements ModelServiceApi {
         }
         return null;
     }
+
+    
 
     /**
      * Return a map of all registered model objects. The returned map is the internal registry
