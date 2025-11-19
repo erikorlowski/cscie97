@@ -1,0 +1,46 @@
+Occupant martin_fowler not found                                                                                                                                      
+Set House1:LivingRoom:lights status power to on                                                                                                                       
+Set House1:LivingRoom:thermostat status temperature to 72
+martin_fowler entered House1:LivingRoom
+Set House1:Bathroom:tv_ava status Text to Speech to Fire in the Kitchen. Please evacuate immediately using the windows.
+Set House1:LivingRoom:tv_ava status Text to Speech to Fire in the Kitchen. Please evacuate immediately.
+Object not found: No appliances of type ava found in House1:Bedroom
+Set House1:Kitchen:tv_ava status Text to Speech to Fire in the Kitchen. Please evacuate immediately using the windows.
+Set House1:LivingRoom:lights status power to ON
+Set House1:Bedroom:lights status power to ON
+Fire detected at House1:Kitchen:smoke_detector calling 911!
+Set House1:LivingRoom:teleporter status speed to hyperdrive
+Occupant martin_fowler found at House1:LivingRoom
+Occupant martin_fowler removed from room: House1:LivingRoom
+Getting occupants in room: House1:LivingRoom
+Occupants in room House1:LivingRoom: []
+Set House1:LivingRoom:lights status power to off
+Set House1:LivingRoom:thermostat status temperature to 65
+martin_fowler left House1:LivingRoom
+Occupant martin_fowler not found
+Refrigerator 'House1:Kitchen:refrigerator' currently has 2 beer(s).
+Would you like to order more beer? (yes/no): yes
+To: House1:Kitchen:refrigerator
+Subject: Beer Refill Request
+
+Hello,
+
+Please send additional beer to House1:Kitchen:refrigerator. Current count: 2.
+
+Thank you.
+
+Refrigerator 'House1:Kitchen:refrigerator' currently has -1 beer(s).
+Would you like to order more beer? (yes/no): yes
+To: House1:Kitchen:refrigerator
+Subject: Beer Refill Request
+
+Hello,
+
+Please send additional beer to House1:Kitchen:refrigerator. Current count: -1.
+
+Thank you.
+
+Set House1:Bathroom:tv_ava status Text to Speech to Food is ready.
+Set House1:LivingRoom:tv_ava status Text to Speech to Food is ready.
+Set House1:Kitchen:tv_ava status Text to Speech to Food is ready.
+Oven House1:Kitchen:oven is done
