@@ -62,28 +62,8 @@ public class EntitlementServiceApi {
             endIdx = Math.min(commaIdx, spaceIdx);
         }
         primary = lower.substring(0, endIdx).trim();
-
-        // Commands that do not require an admin to be logged in:
-        // create_user, add_user_credential, login, logout, check_access
-        if (!"create_user".equals(primary)
-                && !"add_user_credential".equals(primary)
-                && !"login".equals(primary)
-                && !"logout".equals(primary)
-                && !"check_access".equals(primary)) {
-            boolean adminFound = false;
-            for (AccessToken t : accessTokens) {
-                if (t.isAdmin() && !t.isExpired()) {
-                    adminFound = true;
-                    break;
-                }
-            }
-            if (!adminFound) {
-                // No admin currently logged in with a valid token
-                throw new AccessDeniedException(primary, "unknown");
-            }
-        }
-
-    switch (primary) {
+        
+        switch (primary) {
             case "define_permission":
                 return definePermission(trimmed);
             case "define_role":
@@ -288,18 +268,25 @@ public class EntitlementServiceApi {
      * @return result message
      */
     private String createResourceRole(String commandText) throws EntitlementException {
-        String[] parts = commandText.split(",");
-        if (parts.length < 4) throw new EntitlementException("invalid create_resource_role");
-        String name = parts[1].trim();
-        String roleId = parts[2].trim();
-        String resourceName = parts[3].trim();
+        // Expected format: create_resource_role <name>, <roleId>, <resourceName>
+        String[] parts = commandText.split(",", 3);
+        if (parts.length < 3) throw new EntitlementException("invalid create_resource_role");
+
+        // left side: "create_resource_role <name>" -> extract the name token
+        String left = parts[0].trim();
+        String[] leftParts = left.split("\\s+", 2);
+        if (leftParts.length < 2) throw new EntitlementException("invalid create_resource_role");
+        String name = unquote(leftParts[1].trim());
+
+        String roleId = parts[1].trim();
+        String resourceName = unquote(parts[2].trim());
         Optional<Role> role = entitlements.stream().filter(e -> e instanceof Role && e.getId().equals(roleId)).map(e -> (Role)e).findFirst();
         Resource resource = resources.stream().filter(x -> x.getName().equals(resourceName)).findFirst().orElseGet(() -> {
             Resource newResource = EntitlementServiceAbstractFactory.getInstance().createResource(resourceName);
             resources.add(newResource);
             return newResource;
         });
-        if (!role.isPresent()) throw new EntitlementException("role not found");
+        if (!role.isPresent()) throw new EntitlementException("role " + roleId + " not found");
         ResourceRole newResourceRole = EntitlementServiceAbstractFactory.getInstance().createResourceRole(name, role.get(), resource);
         resourceRoles.add(newResourceRole);
         return "Created resource role " + name;
@@ -313,10 +300,19 @@ public class EntitlementServiceApi {
      * @return result message
      */
     private String addResourceRoleToUser(String commandText) throws EntitlementException {
-        String[] parts = commandText.split(",");
-        if (parts.length < 3) throw new EntitlementException("invalid add_resource_role_to_user");
-        String userId = parts[1].trim();
-        String resourceRoleName = parts[2].trim();
+        // Expected format: add_resource_role_to_user <user_id>, <resource_role>
+        String[] parts = commandText.split(",", 2);
+        if (parts.length < 2) throw new EntitlementException("invalid add_resource_role_to_user");
+
+        // left side: "add_resource_role_to_user <user_id>" -> extract the id token
+        String left = parts[0].trim();
+        String[] leftParts = left.split("\\s+");
+        if (leftParts.length < 2) throw new EntitlementException("invalid add_resource_role_to_user");
+        String userId = leftParts[1].trim();
+
+        // right side: resource role name (may be quoted)
+        String resourceRoleName = unquote(parts[1].trim());
+
         Optional<User> user = users.stream().filter(x -> x.getId().equals(userId)).findFirst();
         Optional<ResourceRole> resourceRole = resourceRoles.stream().filter(x -> x.getName().equals(resourceRoleName)).findFirst();
         if (!user.isPresent()) throw new EntitlementException("user not found");
@@ -434,11 +430,11 @@ public class EntitlementServiceApi {
             throw new EntitlementException("invalid token");
         }
         Optional<AccessToken> accessToken = accessTokens.stream().filter(x -> x.getToken() == tokenLong).findFirst();
-        if (!accessToken.isPresent()) throw new AccessDeniedException(permissionId, resourceName);
+        if (!accessToken.isPresent()) throw new AccessDeniedException(permissionId, resourceName, "token not found");
         AccessToken token = accessToken.get();
         // find permission
         Optional<Permission> permission = entitlements.stream().filter(e -> e instanceof Permission && e.getId().equals(permissionId)).map(e -> (Permission)e).findFirst();
-        if (!permission.isPresent()) throw new EntitlementException("permission not found");
+        if (!permission.isPresent()) throw new EntitlementException("permission " + permissionId + " not found");
         Resource resource = resources.stream().filter(r -> r.getName().equals(resourceName)).findFirst().orElseGet(() -> {
             Resource rNew = EntitlementServiceAbstractFactory.getInstance().createResource(resourceName);
             resources.add(rNew);
@@ -451,7 +447,7 @@ public class EntitlementServiceApi {
             token.touch();
             return "Access Granted";
         }
-        throw new AccessDeniedException(permissionId, resourceName);
+        throw new AccessDeniedException(permissionId, resourceName, "permission not granted");
     }
 
     /**

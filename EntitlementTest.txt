@@ -1,1 +1,27 @@
 create_user CLI_Admin, CLI_Admin
+add_user_credential CLI_Admin, password, ILovePotatos
+login user CLI_Admin, password ILovePotatos
+define_permission, control_light, control_light, "Control Lights"
+define_permission, control_ava, control_ava, "Control Ava"
+define_permission, view_configuration, view_configuration, "Used by controller service"
+define_role, adult_role, adult_role, "Role for adults in the Housemate system"
+add_entitlement_to_role, adult_role, control_light
+add_entitlement_to_role, adult_role, control_ava
+add_entitlement_to_role, controller_role, adult_role
+add_entitlement_to_role, controller_role, view_configuration
+
+define house house1 address "1114 Karthik Ave."
+define room kitchen floor 1 type kitchen house house1 windows 2
+define occupant John type adult
+add occupant John to_house house1
+
+define appliance ava type ava room house1:kitchen energy-use 1
+define appliance lights type light room house1:kitchen energy-use 12
+define appliance dishwasher type dishwasher room house1:kitchen energy-use 24
+
+login voiceprint --John--
+set appliance house1:kitchen:ava status voiceprint value --John--
+set appliance house1:kitchen:ava status voice_in value Lights On
+set appliance house1:kitchen:dishwasher status power value On
+
+inventory_entitlement_service

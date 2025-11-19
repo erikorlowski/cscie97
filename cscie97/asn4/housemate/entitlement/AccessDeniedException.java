@@ -13,12 +13,12 @@ public class AccessDeniedException extends EntitlementException {
      * object they attempted to access.
      *
      * @param objectAttemptedToAccess the object the user tried to access
-     * @param user the user identifier
+     * @param resource the user identifier
      */
-    public AccessDeniedException(String objectAttemptedToAccess, String user) {
-        super("Access denied for user: " + user + " on " + objectAttemptedToAccess);
+    public AccessDeniedException(String objectAttemptedToAccess, String resource, String message) {
+        super("Access denied for resource: " + resource + " on " + objectAttemptedToAccess + ". Reason: " + message);
         this.objectAttemptedToAccess = objectAttemptedToAccess;
-        this.user = user;
+        this.user = resource;
     }
 
     /**

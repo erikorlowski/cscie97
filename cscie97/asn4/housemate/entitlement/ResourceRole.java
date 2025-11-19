@@ -55,7 +55,9 @@ public class ResourceRole implements Visitable {
      * @return true if the permission is granted for the resource
      */
     public boolean checkAccess(Permission permission, Resource resource) {
-        if (!this.resource.checkAccess(resource)) return false;
+        if (!resource.checkAccess(this.resource)) {
+            return false;
+        } 
         return role != null && role.checkAccess(permission);
     }
 

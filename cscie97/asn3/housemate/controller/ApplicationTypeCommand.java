@@ -1,7 +1,9 @@
-package cscie97.asn4.housemate.controller;
+package cscie97.asn3.housemate.controller;
 
-import cscie97.asn4.housemate.model.ModelServiceApi;
-import cscie97.asn4.housemate.model.ModelServiceApiImpl;
+import cscie97.asn2.housemate.model.ModelServiceApi;
+import cscie97.asn2.housemate.model.ModelServiceApiImpl;
+import cscie97.asn4.housemate.entitlement.EntitlementServiceApi;
+
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -33,8 +35,8 @@ public class ApplicationTypeCommand implements Command {
             StringBuilder result = new StringBuilder();
             for (String appliance : appliances) {
                 String command = String.format("set appliance %s status %s value %s", appliance, statusName, newValue);
-                long token = cscie97.asn4.housemate.entitlement.EntitlementServiceApi.getInstance().getCurrentAccessToken();
-                modelService.executeCommand(command, token);
+
+                modelService.executeCommand(command, ControllerServiceApi.getInstance().getControllerAccessToken());
                 result.append(String.format("Set %s status %s to %s%n", appliance, statusName, newValue));
             }
             return result.toString().trim();

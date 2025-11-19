@@ -246,7 +246,7 @@ class CommandParser {
 
             try {
                 EntitlementServiceApi.getInstance().executeCommand("create_user " + newOccupant.getName() + ", " + newOccupant.getName());
-                EntitlementServiceApi.getInstance().executeCommand("add_user_credential " + newOccupant.getName() + " voice_print --" + newOccupant.getName() + "--");
+                EntitlementServiceApi.getInstance().executeCommand("add_user_credential " + newOccupant.getName() + ", voice_print, --" + newOccupant.getName() + "--");
             } catch (EntitlementException e) {
                 throw new IllegalArgumentException("Failed to create Entitlement user for occupant at: " + this.scriptLineText + " Cause: " + e.getMessage());
             }
@@ -384,7 +384,7 @@ class CommandParser {
             ModelServiceApiImpl.getInstance().addOwnership(house, occupant);
 
             try {
-                EntitlementServiceApi.getInstance().executeCommand("create_resource_role " + house.getName() + occupant.getType().toString() + ", " + occupant.getType() + "_role" + ", " + house.getName());
+                EntitlementServiceApi.getInstance().executeCommand("create_resource_role " + house.getName() + occupant.getType().toString() + ", " + occupant.getType().toString().toLowerCase() + "_role" + ", " + house.getName());
                 EntitlementServiceApi.getInstance().executeCommand("add_resource_role_to_user " + occupant.getName() + ", " + house.getName() + occupant.getType().toString());
             } catch (EntitlementException e) {
                 throw new IllegalArgumentException("Failed to create Entitlement user for occupant at: " + this.scriptLineText + " Cause: " + e.getMessage());

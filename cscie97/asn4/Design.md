@@ -222,10 +222,6 @@ When AccessTokens are created, they are given an expiration time. This expiratio
 #### Authentication Required for Administrator Commands
 In order to use certain commands, an Admin User must be logged in.
 
-| __Requirement: Admin User for Configuration Commands__ |
-|--|
-| With the exception of the create_user, add_user_credential, login, logout and check_access commands, all commands described in this document shall throw an AccessDeniedException if an Admin User is not currently logged in with a valid AccessToken. |
-
 ### Inventory
 An inventory of the Housemate Entitlement Service can be requested with the following command:
 
@@ -478,7 +474,7 @@ package cscie97.asn4.housemate.entitlement {
     }
 
     class InvalidAccessTokenException {
-        - char[] accessToken
+        - long accessToken
     }
 
     class AccessDeniedException {
@@ -826,10 +822,8 @@ The testing for the Housemate Entitlement Service shall include the following:
 * A Non-Admin User being created by the Housemate Model Service
 * A Non-Admin User being given a Resource Role by being associated with a House
 * A request needing authentication being made directly to the Housemate Model Service and being accepted
-* A request needing authentication being made directly to the Housemate Model Service and being rejected
 * A request needing authentication being made through the Housemate Controller Service and being accepted
-* A request needing authentication being made through the Housemate Controller Service and being rejected
-* An attempt to use an expired AccessToken (this can be achieved by temporarily changing the timeout time and introducing a sleep command into the command processor)
+* A request needing authentication being rejected
 
 ## Risks
 The Housemate System has a high amount of access to user homes. Because of that, it is an ethical responsibility of the Housemate Company to ensure that the safety of Housemate users is protected by ensuring the security of Housemate systems. The Housemate Entitlement Service provides the protection for users to ensure that this service remains safe and secure.
