@@ -244,7 +244,7 @@ The following section discusses the system level requirements of the NGATC. More
 #### Security
 | Requirement: Communication Encryption |
 |--|
-| All communication between modules shall use TLE encryption. |
+| All communication between modules shall use TLS encryption. |
 
 | Requirement: Role-Based Authentication |
 |--|
@@ -316,6 +316,7 @@ The modules that make up the NGATC are shown in the component diagram below and 
 ```plantuml
 @startuml
 title NGATC Modules - Component Diagram
+scale max 800 width
 
 component "Pilot Communicator" as comms
 component Administrator as admin
@@ -331,7 +332,7 @@ interface "Flight Data" as data
 interface "Weather Data" as weatherData
 interface "Pilot Messages" as msg
 
-control --> tracker : Get flight data
+control <--> tracker : Get flight data.\nSubmit flight plans.
 control --> weather : Get weather data for map
 control --> map : Get static map elements for controller map
 control --> info : Get aircraft info to display
@@ -372,7 +373,7 @@ The Adminstrator module is responsible for managing the NGATC at a "macro" level
 The Controller module is the primary interface that flight controllers will directly interact with. This module exposes a GUI to flight controllers that shows aircraft light data, weather, map information and aircraft type information. The Controller module consumes this information from the Flight Tracker, Static Map, Aircraft Info and Weather subsystems. This module allows bidirectional communication between pilots and controllers, as well as between multiple controllers. It also provides alert information to controllers, as well as AI generated suggestions.
 
 ### Pilot Communicator
-The Pilot Communicator module is responsible for handling encrypted communications between pilots and flight controllers.
+The Pilot Communicator module is responsible for handling encrypted communications between pilots and flight controllers. This module is also responsible for logging and playback of these communications.
 
 ### Flight Tracker
 The Flight Tracker module is a safety critical module responsible for consuming all data related to aircraft flights and providing this information to the Controller module. In addition to consuming data, the Flight Tracker module has the responsibility to detect aircraft conflicts and any other unsafe conditions, and to respond appropriately. The module also uses an AI agent to make adjustments to flight plans, using safety critical code to detect for any hazards.
@@ -390,3 +391,113 @@ The Static Map module is responsible for managing the airspace map, including st
 
 ### Simulator
 The Simulator module is responsible for providing mock data to the modules of the NGATC, as well as consuming information from the NGATC to inform this mock data. Furthermore, the Simulator module will report to the modules that are consuming it whether the system is in production or simulated mode. An adminstator can interact with the Simulator module through a command line interface to enable and disable simulation mode.
+
+## Module Communications
+Modules communicate with each other and with external services through REST APIs. Communication between modules is encrypted using TLS encryption.
+
+## High Level Flight Sequence
+The diagram below shows a high level overview of the communication between modules during the course of an example flight.
+
+```plantuml
+@startuml
+title High Level Flight Sequence
+
+actor Pilot as pilot
+participant "Pilot Communicator" as comms
+participant "Controller" as control
+participant "Flight Tracker" as tracker
+participant "Aircraft Info" as info
+participant "Weather" as weather
+participant "Static Map" as map
+
+pilot -> comms : Submit flight plan
+comms -> control : Post new flight plan
+control -> tracker : Validate new flight plan
+tracker -> info : Get info on aircraft type for validation
+info --> tracker
+tracker -> weather : Get weather info for validation
+weather --> tracker
+tracker -> map : Get map info for validation
+map --> tracker
+tracker --> control : Accept/Reject flight plan
+control --> comms : Accept/Reject flight plan
+comms -> pilot : Flight plan acceptance/rejection
+tracker -> tracker : AI generated route optimization created
+tracker -> tracker : Deterministic validation of AI suggested route
+tracker -> control : Suggest new route
+control --> tracker : Accept/Reject new route
+control -> comms : Inform of new route
+comms -> pilot : New route
+
+@enduml
+```
+
+This diagram depicts how the pilots interact with the Pilot Communicator module, which then relays messages to the Controller module. It also depicts how the Flight Tracker module validates a flight plan, using data from other, lower level modules. The interactions in the flight plan validation process are meant to be illustritive, with more specific details available in the Flight Tracker module level design. Finally, the diagram depicts the process of receiving, validating and communicating an AI suggested route optimization. Of note is that once the suggestion is created, it is validated in a deterministic manner (i.e. not through the use of AI) to ensure the new flight plan is safe.
+
+## Access Control
+Access control for the NGATC will utilize the Entitlement Service developed by Housemate Inc. The three roles defined for the NGATC are controllers, supervisors and administrators. For all actions in the NGATC that are not "read-only", some level of authenticated access is required, with specifics discussed in the requirements and design details.
+
+## Persistence Strategy
+For each module, all information needed to restore to the current running point in the event of failure is stored persistently in a database, accessed using Hibernate. For classes that must be persisted, the module level designs outline what property in the class maps to the primary key that relates the object to the persistent database.
+
+## Use of AI
+AI agents are used to accomplish three tasks in the NGATC, all interfacing with the Flight Tracker module:
+* To predict future aircraft conflicts (although detecting active loss of separation events is accomplished through deterministic, safety critical code)
+* To generate route optimization suggestions (validated by deterministic code)
+* To detect and report abnormal aircraft behavior
+
+In no cases will an AI agent have the authority to direct edit a any data in the NGATC without being deterministically validated. Whenever possible, any actions proposed by an AI agent are also validated by a human.
+
+## High Level Testing Strategy
+The NGATC is tested at three levels, unit testing, module testing and system testing.
+
+### Unit Testing
+Unit testing is performed as needed on modules of the NGATC. For safety critical code, the following guidelines are established:
+* CCN <= 3: Unit test not required
+* CCN <= 9: Unit test required with reasonable branch coverage
+* CCN >= 10: Unit test required with 100% branch coverage required
+
+For non-safety critical code, the following guidelines are established:
+* CCN <= 3: Unit test not recommended
+* CCN <= 9: Unit test recommended with reasonable branch coverage
+* CCN >= 10: Unit test required with reasonable branch coverage
+
+### Module Testing
+Module testing validates an individual module's behavior. It is performed by ingesting communication directly into the module, interacting with the module's GUI as appropriate, and observing the communicates output from the module. Details on module testing are discussed in the module design sections.
+
+### System Testing
+System testing is used to validate the NGATC's behavior as a "closed box". In system tests, the data for the NGATC to act upon are simulated through the Simulation module and user interactions with system GUIs are simulated using [Functionize](https://www.functionize.com/?_gl=1*12iaepr*_up*MQ..*_ga*MTMyMzYyNjUzMi4xNzY1MzEwMDI0*_ga_77JHMZYNHZ*czE3NjUzMTAwMjMkbzEkZzAkdDE3NjUzMTAwMjMkajYwJGwwJGgyMDExNDMyMDUy).
+
+#### Happy Path Test
+* Mock weather, map and aircraft type data are input through the simulator and the Aircraft Info GUI
+* Multiple flight plans are submitted that should be accepted
+* It is validated that these flight plans are accepted
+* The NGATC waits until an AI route optimization is suggested
+* It is validated that this suggestion is correctly accepted or rejected
+* Is is validated that any updates to a flight plan are communicated properly
+* The simulator injects surveillance data that should move an aircraft between sectors
+* It is validated that the aircraft correctly changed sectors
+* The Administrator module GUI changes a sector boundary
+* It is validated the all aircraft are correctly re-assigned and the controller GUIs update as needed
+
+#### Loss of Separation Test
+This test validates that the system responds properly to aircraft loss of separation events with other aircraft and static hazards.
+* Mock weather, map and aircraft type data are input through the simulator and the Aircraft Info GUI
+* Multiple flight plans are submitted that should be accepted
+* It is validated that these flight plans are accepted
+* The simulator injects flight surveillance data that should indicate a loss of separation between two aircraft
+* It is validated that the system responds correctly to this loss of separation
+* The simulator injects flight surveillance data that should indicate a loss of separation between an aircraft and a static hazard
+* It is validated that the system responds correctly to this loss of separation
+
+#### Invalid Flight Plan Test
+* Mock weather, map and aircraft type data are input through the simulator and the Aircraft Info GUI
+* Multiple flight plans are submitted that should be rejected
+* It is validated that these flight plans are rejected and not added to the NGATC system.
+
+## Risk Summary
+The most critical risk for the NGATC is safety and availability. This risk comes in two forms: the risk that the system will cause a pilot to take an unsafe action and the risk that the system will fail to detect of act upon an existing unsafe condition. This risk is mitigated by the Flight Tracker module being treated as a safety critical module, with several design choices in the module reflecting the principal of diverse redundancy, and with the SC3 level of rigor the module is developed to. A significant challenge in developing the safety infrastructure of the NGATC is unlike in machine safety where "the safest machine is one that isn't running", there is no candidate for a "safe state" for the system. This means that the system must keep operating at all times and provide its best possible guidance to pilots.
+
+Furthermore, this risk is mitigated by deploying redundant instances of the modules and corresponding databases making up the system, that automatically fail-over in the event of any failures.
+
+Another class of risk in the NGATC is security. An unauthorized user making changes to this system could have catasrophic consequences. To mitigate this risk, the system is designed with access control using the Housemate Entitlement Service.
