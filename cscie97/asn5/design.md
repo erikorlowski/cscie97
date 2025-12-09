@@ -434,6 +434,9 @@ comms -> pilot : New route
 
 This diagram depicts how the pilots interact with the Pilot Communicator module, which then relays messages to the Controller module. It also depicts how the Flight Tracker module validates a flight plan, using data from other, lower level modules. The interactions in the flight plan validation process are meant to be illustritive, with more specific details available in the Flight Tracker module level design. Finally, the diagram depicts the process of receiving, validating and communicating an AI suggested route optimization. Of note is that once the suggestion is created, it is validated in a deterministic manner (i.e. not through the use of AI) to ensure the new flight plan is safe.
 
+## System Deployment
+The NGATC is deployed through Kubernetes, with each module being deployed along with its database. Multiple instances of each module are deployed to allow for redundant switchover and automatic load balancing handled automatically by Kubernetes. To ensure resiliance against any physical events, instances of each module are commissioned at disparate geographic locations.
+
 ## Access Control
 Access control for the NGATC will utilize the Entitlement Service developed by Housemate Inc. The three roles defined for the NGATC are controllers, supervisors and administrators. For all actions in the NGATC that are not "read-only", some level of authenticated access is required, with specifics discussed in the requirements and design details.
 
