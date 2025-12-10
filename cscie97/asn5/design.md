@@ -422,17 +422,25 @@ map --> tracker
 tracker --> control : Accept/Reject flight plan
 control --> comms : Accept/Reject flight plan
 comms -> pilot : Flight plan acceptance/rejection
-tracker -> tracker : AI generated route optimization created
+weather -> tracker: Thunderstorm detected
+tracker -> tracker : AI generated route optimization created avoiding a thunderstorm
 tracker -> tracker : Deterministic validation of AI suggested route
 tracker -> control : Suggest new route
 control --> tracker : Accept/Reject new route
 control -> comms : Inform of new route
 comms -> pilot : New route
+tracker -> tracker : Loss of separation between two aircraft detected
+tracker -> tracker : Resolution guidance deterministically created
+tracker -> control : Resolution guidance sent to Controller module
+control -> comms : Resolution guidance automatically sent to pilots
+comms -> pilot : Pilots informed of resolution guidance
 
 @enduml
 ```
 
-This diagram depicts how the pilots interact with the Pilot Communicator module, which then relays messages to the Controller module. It also depicts how the Flight Tracker module validates a flight plan, using data from other, lower level modules. The interactions in the flight plan validation process are meant to be illustritive, with more specific details available in the Flight Tracker module level design. Finally, the diagram depicts the process of receiving, validating and communicating an AI suggested route optimization. Of note is that once the suggestion is created, it is validated in a deterministic manner (i.e. not through the use of AI) to ensure the new flight plan is safe.
+This diagram depicts how the pilots interact with the Pilot Communicator module, which then relays messages to the Controller module. It also depicts how the Flight Tracker module validates a flight plan, using data from other, lower level modules. The interactions in the flight plan validation process are meant to be illustritive, with more specific details available in the Flight Tracker module level design. Finally, the diagram depicts the process of receiving, validating and communicating an AI suggested route optimization, in this case, to avoid a thunderstorm. Of note is that once the suggestion is created, it is validated in a deterministic manner (i.e. not through the use of AI) to ensure the new flight plan is safe.
+
+The thunderstorm route adjustment contrasts with the resolution guidance created to handle a loss of separation event. In this case, the resolution guidance is deterministically created, without the use of AI. This guidance is then automatically sent to the pilots. This removes any human reaction time from the flight controller in the implementation of the resolution guidance.
 
 ## System Deployment
 The NGATC is deployed through Kubernetes, with each module being deployed along with its database. Multiple instances of each module are deployed to allow for redundant switchover and automatic load balancing handled automatically by Kubernetes. To ensure resiliance against any physical events, instances of each module are commissioned at disparate geographic locations.
@@ -456,14 +464,14 @@ The NGATC is tested at three levels, unit testing, module testing and system tes
 
 ### Unit Testing
 Unit testing is performed as needed on modules of the NGATC. For safety critical code, the following guidelines are established:
-* CCN <= 3: Unit test not required
-* CCN <= 9: Unit test required with reasonable branch coverage
-* CCN >= 10: Unit test required with 100% branch coverage required
+* [CCN](https://www.geeksforgeeks.org/dsa/cyclomatic-complexity/) <= 3: Unit test not required
+* [CCN](https://www.geeksforgeeks.org/dsa/cyclomatic-complexity/) <= 9: Unit test required with reasonable branch coverage
+* [CCN](https://www.geeksforgeeks.org/dsa/cyclomatic-complexity/) >= 10: Unit test required with 100% branch coverage required
 
 For non-safety critical code, the following guidelines are established:
-* CCN <= 3: Unit test not recommended
-* CCN <= 9: Unit test recommended with reasonable branch coverage
-* CCN >= 10: Unit test required with reasonable branch coverage
+* [CCN](https://www.geeksforgeeks.org/dsa/cyclomatic-complexity/) <= 3: Unit test not recommended
+* [CCN](https://www.geeksforgeeks.org/dsa/cyclomatic-complexity/) <= 9: Unit test recommended with reasonable branch coverage
+* [CCN](https://www.geeksforgeeks.org/dsa/cyclomatic-complexity/) >= 10: Unit test required with reasonable branch coverage
 
 ### Module Testing
 Module testing validates an individual module's behavior. It is performed by ingesting communication directly into the module, interacting with the module's GUI as appropriate, and observing the communicates output from the module. Details on module testing are discussed in the module design sections.
@@ -504,3 +512,206 @@ The most critical risk for the NGATC is safety and availability. This risk comes
 Furthermore, this risk is mitigated by deploying redundant instances of the modules and corresponding databases making up the system, that automatically fail-over in the event of any failures.
 
 Another class of risk in the NGATC is security. An unauthorized user making changes to this system could have catasrophic consequences. To mitigate this risk, the system is designed with access control using the Housemate Entitlement Service.
+
+## System Monitor Module
+The System Monitor module is responsible for monitoring and reporting on the statuses and events of modules in the NGATC system. The module is implented with a MySQL database and uses the Spring Boot framework for the REST API implementation.
+
+### Module Requirement Summary
+
+#### Module Functional Requirements
+
+* Controller Status Indicators: The System Monitor module shall expose an interface for other modules to report their status.
+* Module Health Monitoring: The System Monitor module shall make available to other modules the status of all modules for which it has status information.
+* Service Unavailable Alert: When the System Monitor module has not received a status update from a module in 2 seconds, it shall report the module as offline.
+* High Priority Ports: In the system deployment, the System Monitor module's service shall have high priority ports for other modules to communicate high priority status updates.
+* Event Logging: The System Monitor module shall expose an interface for other modules to report system events.
+* Event Logging: The System Monitor module shall persistently store all system events provided to the module.
+* Event Logging: The System Monitor module shall expose an interface for other modules to access recorded system events. This service shall require an administrator access token.
+
+#### Module Non-Functional Requirements
+* The System Monitor module shall respond to all incoming requests within 50 ms.
+* The System Monitor module shall reflect all status updates from other modules within 50 ms.
+* The System Monitor module shall be deployed in a redundant configuration, such that if an instance of the module fails, a switchover to a working instance of the module is complete within 250 ms.
+* The System Monitor module shall have the ability to scale horizontally to accomodate additional module instances.
+* The System Monitor module shall be implemented in such a way to allow new module types to be added to the NGATC system.
+* The System Monitor module shall use a REST API to communicate with other modules in the NGATC.
+
+### System Monitor Classes
+The System Monitor is implemented with the following classes as shown below.
+
+```plantuml
+@startuml
+title System Monitor Module Class Diagram
+scale max 800 width
+
+class TrackedModule {
+    - String id
+    - java.time.Instant mostRecentStatusUpdate
+    - Status moduleStatus
+    + TrackedModule(String id, Status moduleStatus)
+    + void receiveStatusUpdate(Status status)
+    + void removeModule()
+    - void pollForTimeout()
+}
+
+TrackedModule ..> Status
+
+interface ModuleObserver {
+    + void onStatusUpdate(String id, Status moduleStatus)
+    + void onModuleRemoval(String id)
+}
+
+ModuleObserver <|.. TrackedModule
+
+class ModuleSubject << (S,#FF7700) Singleton >> {
+    - ArrayList<ModuleObserver> observers
+    + void registerModuleObserver(ModuleObserver observer)
+    + void unregisterModuleObserver(ModuleObserver observer)
+    + void notifyOfStatusUpdate(String id, Status moduleStatus)
+    + void notifyOfModuleRemoval(String id)
+    + boolean hasModule(String id)
+}
+
+ModuleSubject ..> Status
+ModuleSubject "1" *-- "*" ModuleObserver
+
+interface TrackedModuleRepository {
+
+}
+
+class TrackedModuleService {
+    - TrackedModuleRepository repository
+    + TrackedModuleService(TrackedModuleRepository repository)
+    + void receiveNewModule(TrackedModule newModule)
+    + void receiveStatusUpdate(Status newStatus, TrackedModule module)
+    + void receiveModuleRemoval(TrackedModule module)
+    + List<TrackedModule> readModuleStatuses()
+}
+
+TrackedModuleRepository "1" <-- "1" TrackedModuleService
+TrackedModule <.. TrackedModuleService
+TrackedModuleService ..> Status
+
+class TrackedModuleController {
+    - TrackedModuleService service
+    + TrackedModuleController(TrackedModuleService service)
+    + ResponseEntity<TrackedModule> receiveNewModule(TrackedModule newModule)
+    + ResponseEntity<TrackedModule> receiveStatusUpdate(Status newStatus, TrackedModule module)
+    + ResponseEntity<TrackedModule> receiveModuleRemoval(TrackedModule module)
+    + List<TrackedModule> readModuleStatuses()
+}
+
+TrackedModuleService "1" <-- "1" TrackedModuleController
+TrackedModule <.. TrackedModuleController
+TrackedModuleController ..> Status
+
+class LogEvent {
+    - Severity severity
+    - String source
+    - String info
+    - java.time.Instant timestamp
+    + LogEvent(Severity severity, String source, String info, Instance timestamp)
+}
+
+LogEvent ..> Severity
+
+interface LogEventRepository {
+
+}
+
+class LogEventService {
+    - LogEventRepository repository
+    + LogEventService (LogEventRepository repository)
+    + void logEvent(LogEvent newEvent)
+    + List<LogEvent> readEvents(long accessToken)
+}
+
+LogEventRepository "1" <-- "1" LogEventService
+LogEvent <.. LogEventService
+
+class LogEventController {
+    - LogEventService service
+    + LogEventController(LogEventService service)
+    + ResponseEntity<LogEvent> logEvent(LogEvent newEvent)
+    + List<LogEvent> readEvents(long accessToken)
+}
+
+LogEventService "1" <-- "1" LogEventController
+LogEvent <.. LogEventController
+
+class SystemMonitorApplication {
+    + main(String[] args)
+}
+
+enum Status {
+    HEALTHY
+    DIMINISHED
+    CRITICAL
+    OFFLINE
+}
+
+
+
+enum Severity {
+    CRITICAL
+    WARNING
+    INFO
+}
+
+@enduml
+```
+
+#### Class Dictionary
+##### SystemMonitorApplication
+The SystemMonitorApplication class is the main class used by the Spring Boot framework to run the REST API and database implementation. No business logic occurs in this class.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| main | main(String[] args) | Starts the SpringbootapiApplication, which runs the REST API and database implementation. |
+
+##### LogEvent
+The LogEvent class is used to store information for a specific system event in the NGATC.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| LogEvent | LogEvent(Severity severity, String source, String info, Instance timestamp) | Constructs a new LogEvent object. |
+
+###### Properties
+| Property Name | Type | Description |
+| severity | Severity | The severity of the event. |
+| source | String | A String with information about the module creating the event. |
+| info | String | A String containing full information about the event. |
+| timestamp | java.time.Instant | The time when the event occurred. |
+
+##### LogEventRepository
+This interface is used by the Spring Boot framework to store instances of the LogEvent class in the database.
+
+##### LogEventService
+The LogEventService is used to handle the business logic of REST API requests involving the LogEvent object.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| LogEventService | LogEventService (LogEventRepository repository) | Creates and logs a new LogEventService instance. |
+| logEvent | void logEvent(LogEvent newEvent) | Logs a new LogEvent. |
+| readEvents | List<LogEvent> readEvents(long accessToken) | Returns a list of events in the NGATC. |
+
+###### Associations
+| Association Name | Type | Description |
+| repository | LogEventRepository | A reference to a LogEventRepository instance used for this service. |
+
+##### LogEventController
+The LogEventController class is used to generate HTTP responses to REST API requests involving the LogEvent class.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| LogEventController | LogEventController(LogEventService service) | Creates and logs a new LogEventController instance. |
+| logEvent | ResponseEntity<LogEvent> logEvent(LogEvent newEvent) | Logs a new LogEvent. |
+| readEvents | List<LogEvent> readEvents(long accessToken) | Returns a list of events in the NGATC. |
+
+###### Associations
+| Association Name | Type | Description |
+| service | LogEventService  | A reference to a LogEventService instance used for this controller. |
