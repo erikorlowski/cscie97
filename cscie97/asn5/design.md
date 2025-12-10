@@ -446,7 +446,7 @@ The thunderstorm route adjustment contrasts with the resolution guidance created
 The NGATC is deployed through Kubernetes, with each module being deployed along with its database. Multiple instances of each module are deployed to allow for redundant switchover and automatic load balancing handled automatically by Kubernetes. To ensure resiliance against any physical events, instances of each module are commissioned at disparate geographic locations.
 
 ## Access Control
-Access control for the NGATC will utilize the Entitlement Service developed by Housemate Inc. The three roles defined for the NGATC are controllers, supervisors and administrators. For all actions in the NGATC that are not "read-only", some level of authenticated access is required, with specifics discussed in the requirements and design details.
+Access control for the NGATC will utilize the Entitlement Service developed by Housemate Inc. The four roles defined for the NGATC are controllers, supervisors, administrators and internal modules. For all actions in the NGATC that are not "read-only", some level of authenticated access is required, with specifics discussed in the requirements and design details.
 
 ## Persistence Strategy
 For each module, all information needed to restore to the current running point in the event of failure is stored persistently in a database, accessed using Hibernate. For classes that must be persisted, the module level designs outline what property in the class maps to the primary key that relates the object to the persistent database.
@@ -549,16 +549,14 @@ class TrackedModule {
     - java.time.Instant mostRecentStatusUpdate
     - Status moduleStatus
     + TrackedModule(String id, Status moduleStatus)
-    + void receiveStatusUpdate(Status status)
-    + void removeModule()
     - void pollForTimeout()
 }
 
 TrackedModule ..> Status
 
 interface ModuleObserver {
-    + void onStatusUpdate(String id, Status moduleStatus)
-    + void onModuleRemoval(String id)
+    + boolean onStatusUpdate(String id, Status moduleStatus)
+    + boolean onModuleRemoval(String id)
 }
 
 ModuleObserver <|.. TrackedModule
@@ -567,13 +565,13 @@ class ModuleSubject << (S,#FF7700) Singleton >> {
     - ArrayList<ModuleObserver> observers
     + void registerModuleObserver(ModuleObserver observer)
     + void unregisterModuleObserver(ModuleObserver observer)
-    + void notifyOfStatusUpdate(String id, Status moduleStatus)
-    + void notifyOfModuleRemoval(String id)
-    + boolean hasModule(String id)
+    + boolean notifyOfStatusUpdate(String id, Status moduleStatus)
+    + boolean notifyOfModuleRemoval(String id)
+    + void rehydrate()
 }
 
 ModuleSubject ..> Status
-ModuleSubject "1" *-- "*" ModuleObserver
+ModuleSubject "1" o-- "*" ModuleObserver
 
 interface TrackedModuleRepository {
 
@@ -582,10 +580,10 @@ interface TrackedModuleRepository {
 class TrackedModuleService {
     - TrackedModuleRepository repository
     + TrackedModuleService(TrackedModuleRepository repository)
-    + void receiveNewModule(TrackedModule newModule)
-    + void receiveStatusUpdate(Status newStatus, TrackedModule module)
-    + void receiveModuleRemoval(TrackedModule module)
-    + List<TrackedModule> readModuleStatuses()
+    + boolean receiveNewModule(TrackedModule newModule, long accessToken)
+    + boolean receiveStatusUpdate(Status newStatus, TrackedModule module, long accessToken)
+    + boolean receiveModuleRemoval(TrackedModule module, long accessToken)
+    + List<TrackedModule> readModuleStatuses(long accessToken)
 }
 
 TrackedModuleRepository "1" <-- "1" TrackedModuleService
@@ -595,10 +593,10 @@ TrackedModuleService ..> Status
 class TrackedModuleController {
     - TrackedModuleService service
     + TrackedModuleController(TrackedModuleService service)
-    + ResponseEntity<TrackedModule> receiveNewModule(TrackedModule newModule)
-    + ResponseEntity<TrackedModule> receiveStatusUpdate(Status newStatus, TrackedModule module)
-    + ResponseEntity<TrackedModule> receiveModuleRemoval(TrackedModule module)
-    + List<TrackedModule> readModuleStatuses()
+    + ResponseEntity<TrackedModule> receiveNewModule(TrackedModule newModule, long accessToken)
+    + ResponseEntity<TrackedModule> receiveStatusUpdate(Status newStatus, TrackedModule module, long accessToken)
+    + ResponseEntity<TrackedModule> receiveModuleRemoval(TrackedModule module, long accessToken)
+    + List<TrackedModule> readModuleStatuses(long accessToken)
 }
 
 TrackedModuleService "1" <-- "1" TrackedModuleController
@@ -609,6 +607,7 @@ class LogEvent {
     - Severity severity
     - String source
     - String info
+    - int id
     - java.time.Instant timestamp
     + LogEvent(Severity severity, String source, String info, Instance timestamp)
 }
@@ -622,7 +621,7 @@ interface LogEventRepository {
 class LogEventService {
     - LogEventRepository repository
     + LogEventService (LogEventRepository repository)
-    + void logEvent(LogEvent newEvent)
+    + void logEvent(LogEvent newEvent, long accessToken)
     + List<LogEvent> readEvents(long accessToken)
 }
 
@@ -632,7 +631,7 @@ LogEvent <.. LogEventService
 class LogEventController {
     - LogEventService service
     + LogEventController(LogEventService service)
-    + ResponseEntity<LogEvent> logEvent(LogEvent newEvent)
+    + ResponseEntity<LogEvent> logEvent(LogEvent newEvent, long accessToken)
     + List<LogEvent> readEvents(long accessToken)
 }
 
@@ -680,10 +679,12 @@ The LogEvent class is used to store information for a specific system event in t
 
 ###### Properties
 | Property Name | Type | Description |
+|--|--|--|
 | severity | Severity | The severity of the event. |
 | source | String | A String with information about the module creating the event. |
 | info | String | A String containing full information about the event. |
 | timestamp | java.time.Instant | The time when the event occurred. |
+| id | int | A unique ID of the LogEvent to use as the primary key in the database. |
 
 ##### LogEventRepository
 This interface is used by the Spring Boot framework to store instances of the LogEvent class in the database.
@@ -695,11 +696,12 @@ The LogEventService is used to handle the business logic of REST API requests in
 | Method Name | Method Signature | Description |
 |--|--|--|
 | LogEventService | LogEventService (LogEventRepository repository) | Creates and logs a new LogEventService instance. |
-| logEvent | void logEvent(LogEvent newEvent) | Logs a new LogEvent. |
-| readEvents | List<LogEvent> readEvents(long accessToken) | Returns a list of events in the NGATC. |
+| logEvent | void logEvent(LogEvent newEvent, long accessToken) | Logs a new LogEvent. |
+| readEvents | List<LogEvent> readEvents(long accessToken) | Returns a list of events in the NGATC if the provided access token has the administrator role. |
 
 ###### Associations
 | Association Name | Type | Description |
+|--|--|--|
 | repository | LogEventRepository | A reference to a LogEventRepository instance used for this service. |
 
 ##### LogEventController
@@ -709,9 +711,204 @@ The LogEventController class is used to generate HTTP responses to REST API requ
 | Method Name | Method Signature | Description |
 |--|--|--|
 | LogEventController | LogEventController(LogEventService service) | Creates and logs a new LogEventController instance. |
-| logEvent | ResponseEntity<LogEvent> logEvent(LogEvent newEvent) | Logs a new LogEvent. |
+| logEvent | ResponseEntity<LogEvent> logEvent(LogEvent newEvent, long accessToken) | Logs a new LogEvent. |
 | readEvents | List<LogEvent> readEvents(long accessToken) | Returns a list of events in the NGATC. |
 
 ###### Associations
 | Association Name | Type | Description |
+|--|--|--|
 | service | LogEventService  | A reference to a LogEventService instance used for this controller. |
+
+##### ModuleSubject
+The ModuleSubject class fills the role of the "subject" in the observer design pattern. This is implemented as a singleton instance, with a list of its registered observers.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| registerModuleObserver | void registerModuleObserver(ModuleObserver observer) | Registers a ModuleObserver to receive updates. |
+| unregisterModuleObserver | void unregisterModuleObserver(ModuleObserver observer) | Removes the ModuleObserver from the list of ModuleObservers receiving updates. |
+| notifyOfStatusUpdate | boolean notifyOfStatusUpdate(String id, Status moduleStatus) | Notifies all registered observers of a module giving a status update. Returns whether a module was found matching the ID. |
+| notifyOfModuleRemoval | boolean notifyOfModuleRemoval(String id) | Notifies all registered observers that a module has been removed and its status should no longer be tracked. Returns whether a module was found matching the ID. |
+| rehydrate | void rehydrate() | On powerup, refreshes the list of tracked observers with the module database. |
+
+###### Associations
+| Association Name | Type | Description|
+|--|--|--|
+| observers | ArrayList<ModuleObserver> | An ArrayList of all registers ModuleObservers. |
+
+##### ModuleObserver
+The ModuleObserver interface fills the role of the observer in the observer framework. It should be noted that this interface is not currently needed, as there is only one concrete observer. However, the interface is included to provide for potential future expansion.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| onStatusUpdate | boolean onStatusUpdate(String id, Status moduleStatus) | Processes a status update. The concrete implementation of this method will decide whether the ID is relevant and process the update if so. If the concrete implementation of this interface is tracking a timeout for status updates, the timeout time should be updated in this method. Returns whether this observer matches the provided ID. |
+| onModuleRemoval | boolean onModuleRemoval(String id) | Processes a module removal. The concrete implementation of this method will decide whether the ID is relevant and remove the module from tracking if so. Returns whether this observer matches the provided ID. |
+
+##### TrackedModule
+The TrackedModule class is the concrete observer for the observer design pattern. This represents a module in the NGATC system whose status is being tracked. It inherits from the ModuleObserver interface.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| TrackedModule | TrackedModule(String id, Status moduleStatus) | Constructs a new TrackedModule instance and creates a thread to call the pollForTimeout method every 250 ms to monitor for a timeout of the module. |
+| pollForTimeout | void pollForTimeout() | Checks if it has been more than 2 seconds since the last time a status update has been received from the module. If it has, the module status is set to OFFLINE. |
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | String | A String identifying the module. This is used as the primary key to store the TrackedModule in the database. |
+| mostRecentStatusUpdate | java.time.Instant | The most recent time this module's status was updated. |
+| moduleStatus | Status | The current status of the module. |
+
+##### TrackedModuleRepository
+This interface is used by the Spring Boot framework to store instances of the TrackedModule class in the database.
+
+##### TrackedModuleService
+The TrackedModuleService is used to handle the business logic of REST API requests involving the TrackedModule object.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| TrackedModuleService | TrackedModuleService (TrackedModuleRepository repository) | Creates and logs a new TrackedModuleService instance. |
+| receiveNewModule | bool receiveNewModule(TrackedModule newModule, long accessToken) | Adds a new module to track the status of. Returns whether this module could be added. |
+| receiveStatusUpdate | bool receiveStatusUpdate(Status newStatus, TrackedModule module, long accessToken) | Processes a module status update. Returns whether that module was found. |
+| receiveModuleRemoval | bool receiveModuleRemoval(TrackedModule module, long accessToken) | Removes a module from tracking. Returns whether the module was found. |
+| readModuleStatuses | List<TrackedModule> readModuleStatuses(long accessToken) | Returns a list of all tracked modules and their statuses. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| repository | TrackedModuleRepository | A reference to a TrackedModuleRepository instance used for this service. |
+
+##### TrackedModuleController
+The TrackedModuleController class is used to generate HTTP responses to REST API requests involving the TrackedModule class.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| TrackedModuleController | TrackedModuleController(TrackedModuleService service) | Creates and logs a new TrackedModuleController instance. |
+| receiveNewModule | ResponseEntity<TrackedModule> receiveNewModule(TrackedModule newModule, long accessToken) | Adds a new module to track the status of. Returns an HTTP 501 status if the module could not be added (e.g. dupicate ID). |
+| receiveStatusUpdate | ResponseEntity<TrackedModule> receiveStatusUpdate(Status newStatus, TrackedModule module, long accessToken) | Processes a module status update. Returns an HTTP 501 status if the module could not be found. |
+| receiveModuleRemoval | ResponseEntity<TrackedModule> receiveModuleRemoval(TrackedModule module, long accessToken) | Removes a module from tracking. Returns an HTTP 501 status if the module could not be found. |
+| readModuleStatuses | List<TrackedModule> readModuleStatuses(long accessToken) | Returns a list of all tracked modules and their statuses. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| service | TrackedModuleService  | A reference to a TrackedModuleService instance used for this controller. |
+
+### Service API
+The Service Monitor module implements the following API services:
+
+* Log Event: Log a new system event.
+    * Inputs:
+        * Event Severity (2=CRITICAL, 1=WARNING, 0=INFO)
+        * Event Source (A String containing information about the module originating the event)
+        * Event Info (A String with full information about the event)
+        * Event Timestamp (Number of milliseconds past the Unix epoch)
+        * Access Token
+    * Output: HTTP Status
+* Read Events: Return all logged system events.
+    * Inputs: Access Token
+    * Outputs: A list of logged events in the form:
+        * Event Severity (2=CRITICAL, 1=WARNING, 0=INFO)
+        * Event Source (A String containing information about the module originating the event)
+        * Event Info (A String with full information about the event)
+        * Event Timestamp (Number of milliseconds past the Unix epoch)
+* New Module: Add a new module for status tracking.
+    * Inputs:
+        * Module ID (String with the module name)
+        * Status (3=HEALTHY, 2=DIMINISHED, 1=CRITICAL, 0=OFFLINE)
+        * Access Token
+    * Output: HTTP Status
+* Status Update: Update a tracked module's status.
+    * Inputs:
+        * Module ID (String with the module name)
+        * Status (3=HEALTHY, 2=DIMINISHED, 1=CRITICAL, 0=OFFLINE)
+        * Access Token
+    * Output: HTTP Status
+* Remove Module: Remove the module from tracking.
+    * Inputs:
+        * Module ID (String with the module name)
+        * Access Token
+    * Output: HTTP Status
+* Read Module Statuses: Returns the status of all tracked modules.
+    * Inputs: Access Token
+    * Output: A list of tracked modules in the form:
+        * Module ID (String with the module name)
+        * Status (3=HEALTHY, 2=DIMINISHED, 1=CRITICAL, 0=OFFLINE)
+
+### Event Logging Sequence Diagram
+```plantuml
+@startuml
+title System Monitor Logging Event
+
+actor "External Module" as extern
+participant LogEventController as ctrl
+participant LogEventService as svc
+participant LogEventRepository as repo
+
+extern -> ctrl : Log Event
+ctrl -> svc : logEvent(newEvent)
+svc -> repo : newEvent added to database
+ctrl --> extern : Return HTTP Success
+
+@enduml
+```
+
+This diagram illustrates the interactions taking place with a new log event being received. The interactions involving the service, controller and repository classes are handled by the Spring Boot framework.
+
+### Module Status Update Sequence Diagram
+```plantuml
+@startuml
+title System Monitor Module Receiving Module Status Update
+actor "Flight Tracker Module" as extern
+participant TrackedModuleController as ctrl
+participant TrackedModuleService as svc
+participant ModuleSubject as sbt
+participant "TrackedModule :\nflightTrackerModule" as ft
+
+extern -> ctrl : Status Update
+ctrl -> svc : receiveStatusUpdate(HEALTHY, flightTracker)
+svc -> sbt : notifyOfStatusUpdate("flightTracker", HEALTHY)
+sbt -> ft : onStatusUpdate("flightTracker", HEALTHY)
+ft --> sbt : return true
+sbt --> svc : return true
+svc --> ctrl : return true
+ctrl --> extern : HTTP Success Response
+@enduml
+```
+
+This diagram illustrates the process of updating the status of a module and returning whether a matching module could be found to update the status of.
+
+### Entitlement Service Integration
+The Read Events API service requires the administrator role to be performed. All other services require the Internal Module role.
+
+### Object Persistence
+Object persistence is handled using the Spring Boot framework, using a MySQL database. The persisted classes are the TrackedModule and LogEvent classes. The observers list in the ModuleSubject class is rehydrated on power up using custom logic with the module database.
+
+### Testing Strategy
+The following module level tests are specified for the System Monitor module:
+#### Module Status Test
+* Register new modules to the System Monitor module
+* Read the module statuses and verify they match their initial statuses
+* Send status updates
+* Read the module statuses and verify they match their new statuses
+* Remove a module
+* Read the module statuses and verify the module is removed
+* Let a module timeout
+* Read the module statuses and verify the module is offline
+* Restart the System Monitor module
+* Read the module statuses and verify the statuses report their proper values
+* Attempt to set a module status with an invalid access token
+* Verify the API service is rejected
+
+#### Logging Test
+* Log several events
+* Verify that the events can be read
+* Attempt to read the events with an invalid access token
+* Verify the API service is rejected
+
+### Risks
+For this module, the primary risk is security. For this reason, it is imerative that API request to this module have access protections. For module statuses, a malicious actor could potentially perform a denial of service attack by spoofing statuses claiming that modules were offline. A malicious actor could also spoof statuses claiming that the modules were healthy, masking actual issues with the modules. For event logging, a malicious actor accessing the NGATC event logs could potentially learn valuable information about the system that could be used for an attack.
