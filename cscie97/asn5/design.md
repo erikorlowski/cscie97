@@ -367,8 +367,6 @@ The modules that make up the NGATC are shown in the component diagram below and 
 title NGATC Modules - Component Diagram
 scale max 800 width
 
-component "Pilot Communicator" as comms
-component Administrator as admin
 component Weather as weather
 component Controller as control
 component "Flight Tracker" as tracker
@@ -381,33 +379,26 @@ interface "Flight Data" as data
 interface "Weather Data" as weatherData
 interface "Pilot Messages" as msg
 
-control <--> tracker : Get flight data.\nSubmit flight plans.
+control --> tracker : Get flight data.\nSubmit flight plans.
 control --> weather : Get weather data for map
 control --> map : Get static map elements for controller map
 control --> info : Get aircraft info to display
 tracker --> weather : Get weather info for flight planning
 tracker --> map : Get static hazards for flight planning
 tracker --> info : Get aircraft properties for flight planning
-control <-> comms : Send and receive pilot messages
-monitor ..> comms
-monitor <--> admin : Administrator UI displays system health.
 monitor ..> weather
-monitor <--> control : Controller UI displays system health.
+monitor --> control : Controller UI displays system health.
 monitor ..> tracker
 monitor ..> map
 monitor ..> info
-admin <--> control : Administrator configures controllers.\nController module receives configuration information from Administrator.
-comms --> sim
 weather --> sim
 tracker --> sim
 map --> sim
-comms <--> sim
 control ..> sim : Sends controller actions to simulator
-admin ..> sim : Sends administive actions to simulator
 
 tracker ---> data
 weather --> weatherData
-comms <----> msg
+control ----> msg
 
 @enduml
 ```
@@ -415,14 +406,12 @@ comms <----> msg
 ### System Monitor
 The System Monitor is responsible for monitoring the health of all modules in the NGATC system. The system monitor consumes the health of each module in the NGATC and produces an interface for modules (the Administrator and Controller, although there is nothing to preclude other modules from consuming this interface) to gain information about the NGATC system health.
 
-### Administrator
-The Adminstrator module is responsible for managing the NGATC at a "macro" level. It exposes a GUI to system administrators, allowing them to assign supervisors and controllers. Additionally, it allows administrators to configure airspace sectors and view workload information for these sectors.
-
 ### Controller
 The Controller module is the primary interface that flight controllers will directly interact with. This module exposes a GUI to flight controllers that shows aircraft light data, weather, map information and aircraft type information. The Controller module consumes this information from the Flight Tracker, Static Map, Aircraft Info and Weather subsystems. This module allows bidirectional communication between pilots and controllers, as well as between multiple controllers. It also provides alert information to controllers, as well as AI generated suggestions.
 
-### Pilot Communicator
-The Pilot Communicator module is responsible for handling encrypted communications between pilots and flight controllers. This module is also responsible for logging and playback of these communications.
+The Controller module also allows administrators and supervisors to configure airspace sectors, assign controllers.
+
+Finally, the controller module allows pilots to have encrypted communication with flight controllers.
 
 ### Flight Tracker
 The Flight Tracker module is a safety critical module responsible for consuming all data related to aircraft flights and providing this information to the Controller module. In addition to consuming data, the Flight Tracker module has the responsibility to detect aircraft conflicts and any other unsafe conditions, and to respond appropriately. The module also uses an AI agent to make adjustments to flight plans, using safety critical code to detect for any hazards.
@@ -451,8 +440,31 @@ The process of provisioning a new flight is demonstated in the activity diagram 
 @startuml
 title Flight Provisioning Activity Diagram
 
+start
+:Pilot proposes a flight plan;
+:Flight Controller receives flight plan;
+if (Human controller accepts plan?) then (yes)
+    :Flight plan is routed to Flight Tracker module;
+    if(Flight Tracker module accepts plan?) (yes)
+        :Flight Tracker module creates new flight track;
+        :Acceptance relayed to Flight Tracker module;
+        :Pilot receives acceptance;
+        stop
+    else (no)
+        :Flight Tracker module rejects flight plan;
+        :Rejection is routed to Flight Controller module;
+        :Pilot receives rejection;
+        stop
+    endif
+else (no)
+    :Flight Controller rejects flight plan;
+    :Pilot receives rejection;
+    stop
+endif
 @enduml
 ```
+
+This diagram illustrates the a flight plan must be accepted by both a human flight controller as well as the analysis performed in the Flight Tracker module. If the flight plan is accepted, then the plan is entered into the NGATC system for the flight to begin. If the flight plan is rejected, then the pilot will need to submit a new plan.
 
 ## High Level Flight Sequence
 The diagram below shows a high level overview of the communication between modules during the course of an example flight.
@@ -460,17 +472,16 @@ The diagram below shows a high level overview of the communication between modul
 ```plantuml
 @startuml
 title High Level Flight Sequence
+scale max 800 width
 
 actor Pilot as pilot
-participant "Pilot Communicator" as comms
 participant "Controller" as control
 participant "Flight Tracker" as tracker
 participant "Aircraft Info" as info
 participant "Weather" as weather
 participant "Static Map" as map
 
-pilot -> comms : Submit flight plan
-comms -> control : Post new flight plan
+pilot -> control : Post new flight plan
 control -> tracker : Validate new flight plan
 tracker -> info : Get info on aircraft type for validation
 info --> tracker
@@ -479,25 +490,22 @@ weather --> tracker
 tracker -> map : Get map info for validation
 map --> tracker
 tracker --> control : Accept/Reject flight plan
-control --> comms : Accept/Reject flight plan
-comms -> pilot : Flight plan acceptance/rejection
+control --> pilot : Flight plan acceptance/rejection
 weather -> tracker: Thunderstorm detected
 tracker -> tracker : AI generated route optimization created avoiding a thunderstorm
 tracker -> tracker : Deterministic validation of AI suggested route
 tracker -> control : Suggest new route
 control --> tracker : Accept/Reject new route
-control -> comms : Inform of new route
-comms -> pilot : New route
+control -> pilot : Inform of new route
 tracker -> tracker : Loss of separation between two aircraft detected
 tracker -> tracker : Resolution guidance deterministically created
 tracker -> control : Resolution guidance sent to Controller module
-control -> comms : Resolution guidance automatically sent to pilots
-comms -> pilot : Pilots informed of resolution guidance
+control -> pilot : Resolution guidance automatically sent to pilots
 
 @enduml
 ```
 
-This diagram depicts how the pilots interact with the Pilot Communicator module, which then relays messages to the Controller module. It also depicts how the Flight Tracker module validates a flight plan, using data from other, lower level modules. The interactions in the flight plan validation process are meant to be illustritive, with more specific details available in the Flight Tracker module level design. Finally, the diagram depicts the process of receiving, validating and communicating an AI suggested route optimization, in this case, to avoid a thunderstorm. Of note is that once the suggestion is created, it is validated in a deterministic manner (i.e. not through the use of AI) to ensure the new flight plan is safe.
+This diagram depicts how the pilots interact with flight controllers through the Flight Control module. It also depicts how the Flight Tracker module validates a flight plan, using data from other, lower level modules. The interactions in the flight plan validation process are meant to be illustritive, with more specific details available in the Flight Tracker module level design. Finally, the diagram depicts the process of receiving, validating and communicating an AI suggested route optimization, in this case, to avoid a thunderstorm. Of note is that once the suggestion is created, it is validated in a deterministic manner (i.e. not through the use of AI) to ensure the new flight plan is safe.
 
 The thunderstorm route adjustment contrasts with the resolution guidance created to handle a loss of separation event. In this case, the resolution guidance is deterministically created, without the use of AI. This guidance is then automatically sent to the pilots. This removes any human reaction time from the flight controller in the implementation of the resolution guidance.
 
@@ -547,7 +555,7 @@ System testing is used to validate the NGATC's behavior as a "closed box". In sy
 * Is is validated that any updates to a flight plan are communicated properly
 * The simulator injects surveillance data that should move an aircraft between sectors
 * It is validated that the aircraft correctly changed sectors
-* The Administrator module GUI changes a sector boundary
+* The Flight Control module GUI changes a sector boundary
 * It is validated the all aircraft are correctly re-assigned and the controller GUIs update as needed
 
 #### Loss of Separation Test
@@ -902,7 +910,7 @@ The Service Monitor module implements the following API services:
 ```plantuml
 @startuml
 title System Monitor Logging Event
-
+scale max 800 width
 actor "External Module" as extern
 participant LogEventController as ctrl
 participant LogEventService as svc
@@ -922,6 +930,7 @@ This diagram illustrates the interactions taking place with a new log event bein
 ```plantuml
 @startuml
 title System Monitor Module Receiving Module Status Update
+scale max 800 width
 actor "Flight Tracker Module" as extern
 participant TrackedModuleController as ctrl
 participant TrackedModuleService as svc
