@@ -1389,3 +1389,541 @@ LogEvent --> Severity
 @enduml
 ```
 
+#### Class Dictionary
+##### Flight
+Description: 
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| acceptFlightPlanUpdate | void acceptFlightPlanUpdate() |  |
+| acceptFlight | void acceptFlight() |  |
+| addFlightLogEntry | void addFlightLogEntry(FlightLogEntry entry) |  |
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| callSign | String |  |
+| departureTime | java.time.Instant |  |
+| eta | java.time.Instant |  |
+| flightStatus | String |  |
+| passengerCount | int |  |
+| fuelAmountPounds | double |  |
+| availableFlightTimeSeconds | double |  |
+| remainingFlightTimeSeconds | double |  |
+| isFlightAccepted | boolean |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| flightPlan | FlightPlan |  |
+| proposedUpdateToFlightPlan | FlightPlan |  |
+| requestedFlightDynamics | FlightDynamics |  |
+| actualFlightDynamics | FlightDynamics |  |
+| aircraft | Aircraft |  |
+| flightLogEntries | ArrayList<FlightLogEntry> |  |
+| manifest | Manifest |  |
+
+
+##### FlightPlan
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| departureTime | java.time.Instant |  |
+| eta | java.time.Instant |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| waypoints | ArrayList<Waypoint> |  |
+
+
+##### FlightDynamics
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| attitude | double |  |
+| heading | double |  |
+| speedKnots | double |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| location | Location |  |
+| trajectory | Trajectory |  |
+| targetWaypoint | Waypoint |  |
+
+
+##### Location
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| latitude | double |  |
+| longitude | double |  |
+| altitudeFeet | double |  |
+
+
+##### Benchmark
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| time | java.time.Instant |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| location | Location |  |
+
+
+##### Trajectory
+Description: 
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| benchmarks | LinkedList<Benchmark> |  |
+
+
+##### Aircraft
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| callSign | String |  |
+| readiness | String |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| model | AircraftModel |  |
+| flightLog | FlightLog |  |
+
+
+##### AircraftModel
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| manufacturer | String |  |
+| type | String |  |
+| ceilingFeet | double |  |
+| stallSpeedKnots | double |  |
+| cruisingSpeedKnots | double |  |
+| maxSpeedKnots | double |  |
+| passengerCapacity | int |  |
+| fuelCapacityPounds | double |  |
+| rangeMiles | double |  |
+
+
+##### FlightLog
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| startDate | java.time.Instant |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| flightLogEntries | LinkedList<FlightLogEntry> |  |
+
+
+##### FlightLogEntry
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| flightRecord | String |  |
+
+
+##### Manifest
+Description: 
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| crewMembers | ArrayList<CrewMember> |  |
+| passengers | ArrayList<Passenger> |  |
+
+
+##### Passenger
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| name | String |  |
+| dateOfBirth | java.time.Instant |  |
+
+
+##### CrewMember
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| name | String |  |
+| dateOfBirth | java.time.Instant |  |
+| role | String |  |
+
+
+##### Waypoint
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| name | String |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| location | Location |  |
+
+
+##### Landmark
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| elevationFeet | double |  |
+
+
+##### Airport
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| code | String |  |
+
+
+##### FlightWarning
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| time | java.time.Instant |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| severity | Severity |  |
+| flightsInDanger | ArrayList<Flight> |  |
+
+
+##### MidAirCollisionWarning
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| timeBeforeCollisionSeconds | double |  |
+| distanceToCollisionMiles | double |  |
+| counterMeasureInstructions | String |  |
+
+
+##### ObstructionWarning
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| timeBeforeCollisionSeconds | double |  |
+| distanceToCollisionMiles | double |  |
+| counterMeasureInstructions | String |  |
+
+
+##### DeviationWarning
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| message | String |  |
+
+
+##### Area
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| type | String |  |
+| radiusMiles | double |  |
+| name | String |  |
+| description | String |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| boundaries | ArrayList<Location> |  |
+
+
+##### Terrain
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| elevationFeet | double |  |
+
+
+##### Building
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| elevationFeet | double |  |
+
+
+##### Airspace
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| upperLimitFeet | double |  |
+| lowerLimitFeet | double |  |
+
+
+##### RestrictedAirspace
+Description: 
+
+
+##### SevereWeather
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| expirationTime | java.time.Instant |  |
+| warningDescription | String |  |
+
+
+##### ControlSector
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long |  |
+| name | String |  |
+| controllerMessages | ArrayList<String> |  |
+| numberOfCurrentFlights | int |  |
+
+
+##### Severity (enum)
+Description: 
+
+Literals
+| Name |
+|--|
+| CRITICAL |
+| WARNING |
+| INFO |
+
+
+##### SectorManager
+Description: 
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| addFlight | void addFlight(Flight flight) |  |
+| removeFlight | void removeFlight(Flight flight) |  |
+| addArea | void addArea(Area area) |  |
+| removeArea | void removeArea(Area area) |  |
+| addWaypoint | void addWaypoint(Waypoint waypoint) |  |
+| removeWaypoint | void removeWaypoint(Waypoint waypoint) |  |
+| handleUpdatedSectors | void handleUpdatedSectors(List<ControlSector> updatedSector) |  |
+| mergeSectors | void mergeSectors(ControlSector consumingSector, List<ControlSector> sectorsGoingAway) |  |
+| getSectorById | ControlSector getSectorById(long id) |  |
+| getSectorFlights | ConcurrentHashMap<long, Flight> getSectorFlights(ControlSector sector) |  |
+| getFlightById | Flight getFlightById(long id) |  |
+| getSectorWarnings | ArrayList<FlightWarning> getSectorWarnings(ControlSector sector) |  |
+| changeFlightToSector | void changeFlightToSector(Flight flight, ControlSector newSector) |  |
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| sectors | ConcurrentHashMap<long, ControlSector> |  |
+| flightMap | ConcurrentHashMap<long, ConcurrentHashMap<long, Flight>> |  |
+| areas | ConcurrentHashMap<long, ConcurrentHashMap<long, Area>> |  |
+| waypoints | ConcurrentHashMap<long, ConcurrentHashMap<long, Waypoint>> |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| sectors | ConcurrentHashMap<long, ControlSector> |  |
+| flightMap | ConcurrentHashMap<long, ConcurrentHashMap<long, Flight>> |  |
+| areas | ConcurrentHashMap<long, ConcurrentHashMap<long, Area>> |  |
+| waypoints | ConcurrentHashMap<long, ConcurrentHashMap<long, Waypoint>> |  |
+
+
+##### ControllerUi
+Description: 
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| startWindow | void startWindow() |  |
+| receiveSystemStatus | void receiveSystemStatus(ArrayList<TrackedModule> moduleStatuses) |  |
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| accessToken | long |  |
+| userName | String |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| windowStrategy | MainWindow |  |
+| moduleStatuses | ArrayList<TrackedModule> |  |
+
+
+##### MainWindow (interface)
+Description: 
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| renderWindow | void renderWindow() |  |
+
+
+##### ControllerWindow
+Description: 
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| renderMap | void renderMap() |  |
+| renderWarnings | void renderWarnings() |  |
+| renderMessages | void renderMessages() |  |
+| showFlightDetails | void showFlightDetails(Flight flight) |  |
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| sector | ControlSector |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| sector | ControlSector |  |
+| sectorManager | SectorManager |  |
+
+
+##### AdminWindow
+Description: 
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| renderSectorSummaryPanel | void renderSectorSummaryPanel() |  |
+| renderAdminPanel | void renderAdminPanel() |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| sectorManager | SectorManager |  |
+
+
+##### DefaultWindow
+Description: 
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| renderLoginPanel | void renderLoginPanel() |  |
+
+
+##### TrackedModule
+Description: 
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | String |  |
+| moduleStatus | Status |  |
+
+
+##### ApiController
+Description: 
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| receiveNewFlightProposal | void receiveNewFlightProposal(Flight newFlight) |  |
+| receiveFlightTrackerNewFlightDecision | void receiveFlightTrackerNewFlightDecision(Flight newFlight, boolean isAccepted) |  |
+| sendFlightDecision | void sendFlightDecision(Flight newFlight, boolean isAccepted) |  |
+| receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isMandatory) |  |
+| sendFlightPlanUpdate | void sendFlightPlanUpdate(Flight flight, boolean isUrgent) |  |
+| respondToFlightPlanUpdate | void respondToFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isAccepted) |  |
+| receiveFlightWarning | void receiveFlightWarning(FlightWarning warning) |  |
+| sendMessageToPilot | void sendMessageToPilot(Flight flight, String message) |  |
+| receiveMessageFromPilot | void receiveMessageFromPilot(Flight flight, String message) |  |
+| sendMessageToSector | void sendMessageToSector(ControlSector sector, String message) |  |
+| receiveMessageFromSector | void receiveMessageFromSector(ControlSector sector, String message) |  |
+| receiveFlights | void receiveFlights() |  |
+| updateWaypoint | void updateWaypoint(Waypoint waypoint) |  |
+| removeWaypoint | void removeWaypoint(Waypoint waypoint) |  |
+| updateArea | void updateArea(Area area) |  |
+| removeArea | void removeArea(Area area) |  |
+| reportLogEvent | void reportLogEvent(LogEvent event) |  |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| flight | Flight |  |
+| flightPlan | FlightPlan |  |
+| flightWarning | FlightWarning |  |
+| controlSector | ControlSector |  |
+| waypoint | Waypoint |  |
+| area | Area |  |
+| logEvent | LogEvent |  |
+
+
+##### LogEvent
+Description: 
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| LogEvent | LogEvent(Severity severity, String source, String info, Instance timestamp) |  |
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| severity | Severity |  |
+| source | String |  |
+| info | String |  |
+| id | int |  |
+| timestamp | java.time.Instant |  |
