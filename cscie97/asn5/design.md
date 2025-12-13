@@ -1034,6 +1034,7 @@ scale max 800 width
 
 class Flight {
     - long id
+    - String callSign
     - java.time.Instant departureTime
     - java.time.Instant eta
     - String flightStatus
@@ -1042,11 +1043,16 @@ class Flight {
     - double availableFlightTimeSeconds
     - double remainingFlightTimeSeconds
     - FlightPlan flightPlan
+    - FlightPlan proposedUpdateToFlightPlan
     - FlightDynamics requestedFlightDynamics
     - FlightDynamics actualFlightDynamics
     - Aircraft aircraft
     - ArrayList<FlightLogEntry> flightLogEntries
     - Manifest manifest
+    - boolean isFlightAccepted
+    + acceptFlightPlanUpdate()
+    + acceptFlight()
+    + addFlightLogEntry(FlightLogEntry entry)
 }
 
 Flight "1" --> "1" FlightPlan
@@ -1178,31 +1184,37 @@ class Airport {
 
 Landmark <|-- Airport
 
-class MidAirCollisionWarning {
+class FlightWarning {
     - long id
     - java.time.Instant time
     - Severity severity
-    - double timeBeforeCollisionSeconds
-    - double distanceToCollisionMiles
-    - String counterMeasureInstructions
     - ArrayList<Flight> flightsInDanger
 }
 
-MidAirCollisionWarning "1" o-- "*" Flight
-MidAirCollisionWarning "1" --> "1" Severity
-
-class ObstructionWarning {
-    - long id
-    - java.time.Instant time
-    - Severity severity
+class MidAirCollisionWarning {
     - double timeBeforeCollisionSeconds
     - double distanceToCollisionMiles
     - String counterMeasureInstructions
-    - Flight flight
 }
 
-ObstructionWarning  "1" --> "1" Flight
-ObstructionWarning "1" --> "1" Severity
+FlightWarning <|-- MidAirCollisionWarning
+FlightWarning "1" o-- "*" Flight
+FlightWarning "1" --> "1" Severity
+
+
+class ObstructionWarning {
+    - double timeBeforeCollisionSeconds
+    - double distanceToCollisionMiles
+    - String counterMeasureInstructions
+}
+
+FlightWarning <|-- ObstructionWarning
+
+class DeviationWarning {
+    - String message
+}
+
+FlightWarning <|-- DeviationWarning
 
 class Area {
     - long id
@@ -1250,6 +1262,8 @@ Airspace <|-- SevereWeather
 class ControlSector {
     - long id
     - String name
+    - ArrayList<String> controllerMessages
+    - int numberOfCurrentFlights
 }
 
 Airspace <|-- ControlSector
@@ -1260,5 +1274,118 @@ enum Severity {
     INFO
 }
 
+class SectorManager << (S,#FF7700) Singleton >> {
+    - ConcurrentHashMap<long, ControlSector> sectors
+    - ConcurrentHashMap<long, ConcurrentHashMap<long, Flight>> flightMap
+    - ConcurrentHashMap<long, ConcurrentHashMap<long, Area>> areas
+    - ConcurrentHashMap<long, ConcurrentHashMap<long, Waypoint>> waypoints
+    + void addFlight(Flight flight)
+    + void removeFlight(Flight flight)
+    + void addArea(Area area)
+    + void removeArea(Area area)
+    + void addWaypoint(Waypoint waypoint)
+    + void removeWaypoint(Waypoint waypoint)
+    + void handleUpdatedSectors(List<ControlSector> updatedSector)
+    + void mergeSectors(ControlSector consumingSector, List<ControlSector> sectorsGoingAway)
+    + ControlSector getSectorById(long id)
+    + ConcurrentHashMap<long, Flight> getSectorFlights(ControlSector sector)
+    + Flight getFlightById(long id)
+    + ArrayList<FlightWarning> getSectorWarnings(ControlSector sector)
+    + void changeFlightToSector(Flight flight, ControlSector newSector)
+}
+
+SectorManager "1" *-- "*" ControlSector
+SectorManager "1" *-- "*" Flight
+SectorManager ..> FlightWarning
+
+class ControllerUi {
+    - long accessToken
+    - String userName
+    - MainWindow windowStrategy
+    + void startWindow()
+    + void receiveSystemStatus(ArrayList<TrackedModule> moduleStatuses)
+}
+
+ControllerUi ..> TrackedModule
+
+interface MainWindow {
+    + void renderWindow()
+}
+
+ControllerUi "1" --> "1" MainWindow
+
+class ControllerWindow {
+    - ControlSector sector
+    - void renderMap()
+    - void renderWarnings()
+    - void renderMessages()
+    - void showFlightDetails(Flight flight)
+}
+
+MainWindow <|.. ControllerWindow
+ControllerWindow --> ControlSector
+ControllerWindow ..> SectorManager
+
+class AdminWindow {
+    - void renderSectorSummaryPanel()
+    - void renderAdminPanel()
+}
+
+AdminWindow ..> SectorManager
+
+MainWindow <|.. AdminWindow
+
+class DefaultWindow {
+    - void renderLoginPanel()
+}
+
+MainWindow <|.. DefaultWindow
+
+class TrackedModule {
+    - String id
+    - Status moduleStatus
+}
+
+class ApiController << (S,#FF7700) Singleton >> {
+    + void receiveNewFlightProposal(Flight newFlight)
+    + void receiveFlightTrackerNewFlightDecision(Flight newFlight, boolean isAccepted)
+    + void sendFlightDecision(Flight newFlight, boolean isAccepted)
+    + void receiveFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isMandatory)
+    + void sendFlightPlanUpdate(Flight flight, boolean isUrgent)
+    + void respondToFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isAccepted)
+    + void receiveFlightWarning(FlightWarning warning)
+    + void sendMessageToPilot(Flight flight, String message)
+    + void receiveMessageFromPilot(Flight flight, String message)
+    + void sendMessageToSector(ControlSector sector, String message)
+    + void receiveMessageFromSector(ControlSector sector, String message)
+    + void receiveFlights()
+    + void updateWaypoint(Waypoint waypoint)
+    + void removeWaypoint(Waypoint waypoint)
+    + void updateArea(Area area)
+    + void removeArea(Area area)
+    + void reportLogEvent(LogEvent event)
+}
+
+SectorManager <.. ApiController
+ApiController ..> Flight
+ApiController ..> FlightPlan
+ApiController ..> FlightWarning
+ApiController ..> ControlSector
+ApiController ..> Waypoint
+ApiController ..> Area
+ApiController ..> LogEvent
+
+class LogEvent {
+    - Severity severity
+    - String source
+    - String info
+    - int id
+    - java.time.Instant timestamp
+    + LogEvent(Severity severity, String source, String info, Instance timestamp)
+}
+
+LogEvent --> Severity
+
 @enduml
 ```
+
