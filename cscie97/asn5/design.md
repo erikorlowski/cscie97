@@ -1350,20 +1350,20 @@ class ApiController << (S,#FF7700) Singleton >> {
     + void receiveNewFlightProposal(Flight newFlight)
     + void receiveFlightTrackerNewFlightDecision(Flight newFlight, boolean isAccepted)
     + void sendFlightDecision(Flight newFlight, boolean isAccepted)
-    + void receiveFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isMandatory)
+    + void receiveFlightPlanUpdate(Flight flight, boolean isMandatory)
     + void sendFlightPlanUpdate(Flight flight, boolean isUrgent)
     + void respondToFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isAccepted)
     + void receiveFlightWarning(FlightWarning warning)
     + void sendMessageToPilot(Flight flight, String message)
     + void receiveMessageFromPilot(Flight flight, String message)
     + void sendMessageToSector(ControlSector sector, String message)
-    + void receiveMessageFromSector(ControlSector sector, String message)
     + void receiveFlights()
     + void updateWaypoint(Waypoint waypoint)
     + void removeWaypoint(Waypoint waypoint)
     + void updateArea(Area area)
     + void removeArea(Area area)
     + void reportLogEvent(LogEvent event)
+    + void receiveModuleStatuses(ArrayList<TrackedModule>)
 }
 
 SectorManager <.. ApiController
@@ -1762,17 +1762,68 @@ The ApiController class is a singleton class used to send and receive messages t
 | receiveNewFlightProposal | void receiveNewFlightProposal(Flight newFlight) | Receives a proposed flight and adds the flight in the SectorManager. |
 | receiveFlightTrackerNewFlightDecision | void receiveFlightTrackerNewFlightDecision(Flight newFlight, boolean isAccepted) | Receives an accept/reject decision from the Flight Tracker module and uses that decision to send a decision to the pilot using sendFlightDecision and update the status of the flight in the Controller module. |
 | sendFlightDecision | void sendFlightDecision(Flight newFlight, boolean isAccepted) | Sends the acceptance or rejection of a new flight to the pilots. |
-| receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isMandatory) | Receives a flight plan update from the FlightTracker module and updates the Flight with the proposed plan in the Controller module, for a controller to accept or reject. If the update is marked as mandatory (e.g. emergency conflict resolution), the update is accepted automatically. |
+| receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight, boolean isMandatory) | Receives a flight plan update from the FlightTracker module and updates the Flight with the proposed plan in the Controller module, for a controller to accept or reject. If the update is marked as mandatory (e.g. emergency conflict resolution), the update is accepted automatically. |
 | sendFlightPlanUpdate | void sendFlightPlanUpdate(Flight flight, boolean isUrgent) | Sends an updated flight plan to the pilots and Flight Tracker module. |
 | respondToFlightPlanUpdate | void respondToFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isAccepted) | Responds to the Flight Tracker module with weather a FlightPlan update was accepted. |
 | receiveFlightWarning | void receiveFlightWarning(FlightWarning warning) | Receives a warning from the Flight Tracker module. |
 | sendMessageToPilot | void sendMessageToPilot(Flight flight, String message) | Sends a message to a pilot. |
 | receiveMessageFromPilot | void receiveMessageFromPilot(Flight flight, String message) | Receives a message from a pilot and adds the message to the appropriate sector. |
 | sendMessageToSector | void sendMessageToSector(ControlSector sector, String message) | Sends a message to another sector encoded with the source sector. |
-| receiveMessageFromSector | void receiveMessageFromSector(ControlSector sector, String message) | Receives a messages from another sector and adds it to the target sector. |
 | receiveFlights | void receiveFlights() | Receives all the currently active flights from the Flight Tracker module. |
 | updateWaypoint | void updateWaypoint(Waypoint waypoint) | Receives an updated waypoint from the Static Map module. |
 | removeWaypoint | void removeWaypoint(Waypoint waypoint) | Receives the removal of a waypoint from the Static Map module. |
 | updateArea | void updateArea(Area area) | Receives an updated area from the Static Map module. |
 | removeArea | void removeArea(Area area) | Receives the removal of an area from the Static Map module. |
 | reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event to the System Monitor module. |
+| receiveModuleStatuses | void receiveModuleStatuses(ArrayList<TrackedModule>) | Receives the status of all NGATC modules. |
+
+### Service API
+The Controller module implements the following API services:
+
+* New Flight Proposal
+    * Inputs:
+        * Flight: The Flight in JSON encoding
+    * Output: HTTP Status, the accept/reject decision will be communicated asynchronously
+* Flight Tracker New Flight Decision:
+    * Inputs:
+        * Flight: The Flight in JSON encoding
+        * Is Accepted: A boolean representing whether the new flight was accepted
+    * Output: HTTP status
+* Update Flight Plan:
+    * Inputs:
+        * Flight: The Flight in JSON Encoding
+        * Is Mandatory: Whether updating the Flight Plan is mandatory (e.g. emergency conflict resolution)
+    * Output: HTTP status
+* Flight Warning:
+    * Inputs:
+        * Warning: A FlightWarning in JSON encoding
+    * Output: HTTP status
+* Receive Pilot Message:
+    * Inputs:
+        * Flight: The Flight in JSON encoding
+        * Message: The message to be sent
+    * Output: HTTP status
+* Update Flights:
+    * Inputs:
+        * Flights: All currently active flights in JSON encoding
+    * Output: HTTP status
+* Update Waypoint:
+    * Inputs:
+        * Waypoint: The updated Waypoint in JSON encoding
+    * Output: HTTP status
+* Remove Waypoint:
+    * Inputs:
+        * Waypoint: The removed Waypoint in JSON encoding
+    * Output: HTTP status
+* Update Area:
+    * Inputs:
+        * Area: The updated Area in JSON encoding
+    * Output: HTTP status
+* Remove Area:
+    * Inputs:
+        * Area: The removed Area in JSON encoding
+    * Output: HTTP status
+* Update Module Statuses:
+    * Inputs:
+        * Statuses: A list of TrackedModules in JSON encoding
+    * Output: HTTP status
