@@ -1244,7 +1244,7 @@ class Airspace {
     - double lowerLimitFeet
 }
 
-Area <-- Airspace
+Area <|-- Airspace
 
 class RestrictedAirspace {
 
@@ -1260,8 +1260,6 @@ class SevereWeather {
 Airspace <|-- SevereWeather
 
 class ControlSector {
-    - long id
-    - String name
     - ArrayList<String> controllerMessages
     - int numberOfCurrentFlights
 }
@@ -1289,6 +1287,8 @@ class SectorManager << (S,#FF7700) Singleton >> {
     + void mergeSectors(ControlSector consumingSector, List<ControlSector> sectorsGoingAway)
     + ControlSector getSectorById(long id)
     + ConcurrentHashMap<long, Flight> getSectorFlights(ControlSector sector)
+    + ConcurrentHashMap<long, Area> getSectorArea(ControlSector sector)
+    + ConcurrentHashMap<long, Waypoint> getSectorWaypoints(ControlSector sector)
     + Flight getFlightById(long id)
     + ArrayList<FlightWarning> getSectorWarnings(ControlSector sector)
     + void changeFlightToSector(Flight flight, ControlSector newSector)
@@ -1391,539 +1391,388 @@ LogEvent --> Severity
 
 #### Class Dictionary
 ##### Flight
-Description: 
+The Flight class is the top level class that encapsulates all information relating to an individual flight.
 
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| acceptFlightPlanUpdate | void acceptFlightPlanUpdate() |  |
-| acceptFlight | void acceptFlight() |  |
-| addFlightLogEntry | void addFlightLogEntry(FlightLogEntry entry) |  |
+| acceptFlightPlanUpdate | void acceptFlightPlanUpdate() | Accepts a proposed edit to the Flight's FlightPlan and replaces the flightPlan with the proposedUpdateToFlightPlan and communicates the updated plan to the pilot. |
+| acceptFlight | void acceptFlight() | Signals that a new flight has been accepted into the NGATC and communicates the acceptance to the pilot. |
+| addFlightLogEntry | void addFlightLogEntry(FlightLogEntry entry) | Adds an entry in the flight's log. |
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| id | long |  |
-| callSign | String |  |
-| departureTime | java.time.Instant |  |
-| eta | java.time.Instant |  |
-| flightStatus | String |  |
-| passengerCount | int |  |
-| fuelAmountPounds | double |  |
-| availableFlightTimeSeconds | double |  |
-| remainingFlightTimeSeconds | double |  |
-| isFlightAccepted | boolean |  |
+| id | long | A globally unique ID used as the primary key in the database. |
+| departureTime | java.time.Instant | The time the flight has departed or is planning to depart. |
+| eta | java.time.Instant | The time the flight is expecting to land. |
+| flightStatus | String | The current status (e.g. "Not Departed", "In Progress", "Landed") of the flight. |
+| passengerCount | int | The number of passengers the flight is carrying. |
+| fuelAmountPounds | double | The current amount of fuel in pounds. |
+| availableFlightTimeSeconds | double | The amount of time the aircraft can fly given the current fuel, altitude and speed. |
+| remainingFlightTimeSeconds | double | The amount of time remaining in the current flight plan. |
+| isFlightAccepted | boolean | Whether the flight has been accepted by air traffic control. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| flightPlan | FlightPlan |  |
-| proposedUpdateToFlightPlan | FlightPlan |  |
-| requestedFlightDynamics | FlightDynamics |  |
-| actualFlightDynamics | FlightDynamics |  |
-| aircraft | Aircraft |  |
-| flightLogEntries | ArrayList<FlightLogEntry> |  |
-| manifest | Manifest |  |
+| flightPlan | FlightPlan | The currently active flight plan. |
+| proposedUpdateToFlightPlan | FlightPlan | A proposed updated flight plan to be evaluated. |
+| requestedFlightDynamics | FlightDynamics | The flight dynamics the aircraft is requested to observe. |
+| actualFlightDynamics | FlightDynamics | The actual flight dynamics of the aircraft. |
+| aircraft | Aircraft | Information about the aircraft flying the flight. |
+| flightLogEntries | ArrayList<FlightLogEntry> | The log entries from the flight. |
+| manifest | Manifest | The flight manifest. |
 
 
 ##### FlightPlan
-Description: 
+The route, departure time and ETA of a flight.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| id | long |  |
-| departureTime | java.time.Instant |  |
-| eta | java.time.Instant |  |
+| id | long | A unique identifier of the flight plan, used as the primary key in the database. |
+| departureTime | java.time.Instant | The time the flight is planned to depart. |
+| eta | java.time.Instant | The time the flight is planned to land. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| waypoints | ArrayList<Waypoint> |  |
+| waypoints | ArrayList<Waypoint> | A list of waypoints the flight is planned to follow. |
 
 
 ##### FlightDynamics
-Description: 
+Information giving the current attitude, heading and speed of the aircraft.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| attitude | double |  |
-| heading | double |  |
-| speedKnots | double |  |
+| attitude | double | The attitude of the aircraft in degrees. 0 degrees is horizontal and positive degrees are climbing. |
+| heading | double | The heading relative to magnetic north, with 0 degrees corresponding to north. |
+| speedKnots | double | The speed of the aircraft in knots. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| location | Location |  |
-| trajectory | Trajectory |  |
-| targetWaypoint | Waypoint |  |
+| location | Location | The current location of the aircraft. |
+| trajectory | Trajectory | The current trajectory of the aircraft. |
+| targetWaypoint | Waypoint | The waypoint the aircraft is flying toward. |
 
 
 ##### Location
-Description: 
+A GPS coordinate with an altitude.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| latitude | double |  |
-| longitude | double |  |
-| altitudeFeet | double |  |
+| latitude | double | The GPS latitude with north as positive. |
+| longitude | double | The GPS longitude with east as positive. |
+| altitudeFeet | double | The altitude in feet above sea level. |
 
 
 ##### Benchmark
-Description: 
+A Location augmented with a time, used to create Trajectories.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| time | java.time.Instant |  |
+| time | java.time.Instant | The time the location will be reached. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| location | Location |  |
+| location | Location | The location that will be reached. |
 
 
 ##### Trajectory
-Description: 
+A list of time/location benchmarks describing a flight's trajectory.
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| benchmarks | LinkedList<Benchmark> |  |
+| benchmarks | LinkedList<Benchmark> | A list of benchmarks for the trajectory. |
 
 
 ##### Aircraft
-Description: 
+The Aircraft class represents information about a particular aircraft making a flight.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| id | long |  |
-| callSign | String |  |
-| readiness | String |  |
+| id | long | A globally unique ID for the aircraft, used as the primary key in the database. |
+| readiness | String | A String representing the readiness of the aircraft. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| model | AircraftModel |  |
-| flightLog | FlightLog |  |
+| model | AircraftModel | The model of the aircraft (e.g. Boeing 737-700) |
+| flightLog | FlightLog | A log of flights made by the aircraft. |
 
 
 ##### AircraftModel
-Description: 
+The AircraftModel class represents a specific model of Aircraft (e.g. Boeing 737-700).
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| id | long |  |
-| manufacturer | String |  |
-| type | String |  |
-| ceilingFeet | double |  |
-| stallSpeedKnots | double |  |
-| cruisingSpeedKnots | double |  |
-| maxSpeedKnots | double |  |
-| passengerCapacity | int |  |
-| fuelCapacityPounds | double |  |
-| rangeMiles | double |  |
+| id | long | A globally unique ID of the aircraft model |
+| manufacturer | String | The manufacturer of the aircraft model (e.g. AirBus) |
+| type | String | The type of aircraft (e.g. Dual Engine, Single Aisle) |
+| ceilingFeet | double | The height altitude above sea level the aircraft model can fly at. |
+| stallSpeedKnots | double | The minimum speed the aircraft can fly without stalling. |
+| cruisingSpeedKnots | double | The optimal speed for the aircraft to cruise at. |
+| maxSpeedKnots | double | The maximum speed the aircraft is capable of flying at. |
+| passengerCapacity | int | The maximum number of passengers the aircraft can carry. |
+| fuelCapacityPounds | double | The fuel capacity of the aircraft. |
+| rangeMiles | double | The maximum number of miles the aircraft can fly. |
 
 
 ##### FlightLog
-Description: 
+A list of flight log entries.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| id | long |  |
-| startDate | java.time.Instant |  |
+| id | long | A globally unique ID of the flight log, used as the primary key in the database. |
+| startDate | java.time.Instant | The time the flight log was created. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| flightLogEntries | LinkedList<FlightLogEntry> |  |
+| flightLogEntries | LinkedList<FlightLogEntry> | A list of entries into the flight log. |
 
 
 ##### FlightLogEntry
-Description: 
+An individual entry into the flight log.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| id | long |  |
-| flightRecord | String |  |
-
-
-##### Manifest
-Description: 
-
-###### Associations
-| Association Name | Type | Description |
-|--|--|--|
-| crewMembers | ArrayList<CrewMember> |  |
-| passengers | ArrayList<Passenger> |  |
-
-
-##### Passenger
-Description: 
-
-###### Properties
-| Property Name | Type | Description |
-|--|--|--|
-| id | long |  |
-| name | String |  |
-| dateOfBirth | java.time.Instant |  |
-
-
-##### CrewMember
-Description: 
-
-###### Properties
-| Property Name | Type | Description |
-|--|--|--|
-| id | long |  |
-| name | String |  |
-| dateOfBirth | java.time.Instant |  |
-| role | String |  |
-
+| id | long | A globally unique ID of the entry, used as the primary key in the database. |
+| flightRecord | String | The message to record. |
 
 ##### Waypoint
-Description: 
+Describes a location augmented with a name.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| id | long |  |
-| name | String |  |
+| id | long | A globally unique ID of the waypoint, used as the primary key in the database. |
+| name | String | The name of the waypoint. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| location | Location |  |
-
-
-##### Landmark
-Description: 
-
-###### Properties
-| Property Name | Type | Description |
-|--|--|--|
-| elevationFeet | double |  |
-
-
-##### Airport
-Description: 
-
-###### Properties
-| Property Name | Type | Description |
-|--|--|--|
-| code | String |  |
-
+| location | Location | The location of the waypoint. |
 
 ##### FlightWarning
-Description: 
+A class used to describe types of warnings that could occur during a flight.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| id | long |  |
-| time | java.time.Instant |  |
+| id | long | A globally unique ID, used as the primary key in the database. |
+| time | java.time.Instant | The time the warning occurred. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| severity | Severity |  |
-| flightsInDanger | ArrayList<Flight> |  |
+| severity | Severity | The severity of the warning. |
+| flightsInDanger | ArrayList<Flight> | A list of the flights in danger with regards to the warning. |
 
 
 ##### MidAirCollisionWarning
-Description: 
+A type of FlightWarning of an aircraft colliding with another aircraft in midair.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| timeBeforeCollisionSeconds | double |  |
-| distanceToCollisionMiles | double |  |
-| counterMeasureInstructions | String |  |
+| timeBeforeCollisionSeconds | double | The number of seconds before collision. |
+| distanceToCollisionMiles | double | The number of miles until the projected collision. |
+| counterMeasureInstructions | String | The instructions provided to pilots to avoid the collision. |
 
 
 ##### ObstructionWarning
-Description: 
+A type of FlightWarning of an aircraft colliding with a static hazard.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| timeBeforeCollisionSeconds | double |  |
-| distanceToCollisionMiles | double |  |
-| counterMeasureInstructions | String |  |
-
+| timeBeforeCollisionSeconds | double | The number of seconds before collision. |
+| distanceToCollisionMiles | double | The number of miles until the projected collision. |
+| counterMeasureInstructions | String | The instructions provided to pilots to avoid the collision. |
 
 ##### DeviationWarning
-Description: 
+A type of FlightWarning indicating that a flight has made a significant deviation from its flight plan.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| message | String |  |
+| message | String | A message explaining the deviation. |
 
 
 ##### Area
-Description: 
+Represents an area in the NGATC system.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| id | long |  |
-| type | String |  |
-| radiusMiles | double |  |
-| name | String |  |
-| description | String |  |
+| id | long | A globally unique ID, used as the primary key in the database. |
+| type | String | A String indicating the type of area. |
+| radiusMiles | double | The radius of the area in miles. |
+| name | String | The name of the area. |
+| description | String | A description of the area. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| boundaries | ArrayList<Location> |  |
-
-
-##### Terrain
-Description: 
-
-###### Properties
-| Property Name | Type | Description |
-|--|--|--|
-| elevationFeet | double |  |
-
-
-##### Building
-Description: 
-
-###### Properties
-| Property Name | Type | Description |
-|--|--|--|
-| elevationFeet | double |  |
-
+| boundaries | ArrayList<Location> | An ordered list of the boundaries of the area. |
 
 ##### Airspace
-Description: 
+A type of area describing a volume of airspace.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| upperLimitFeet | double |  |
-| lowerLimitFeet | double |  |
+| upperLimitFeet | double | The upper limit of airspace altitude. |
+| lowerLimitFeet | double | The lower limit of the airspace altitude. |
 
 
 ##### RestrictedAirspace
-Description: 
-
+A type of Airspace that is restricted for civil aviation.
 
 ##### SevereWeather
-Description: 
+A type of Airspace experiencing hazardous weather conditions for flight.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| expirationTime | java.time.Instant |  |
-| warningDescription | String |  |
+| expirationTime | java.time.Instant | The time the weather will expire. |
+| warningDescription | String | A description of the severe weather. |
 
 
 ##### ControlSector
-Description: 
+A type of airspace describing a region of responsibility for a flight controller.
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| id | long |  |
-| name | String |  |
-| controllerMessages | ArrayList<String> |  |
-| numberOfCurrentFlights | int |  |
-
-
-##### Severity (enum)
-Description: 
-
-Literals
-| Name |
-|--|
-| CRITICAL |
-| WARNING |
-| INFO |
-
+| controllerMessages | ArrayList<String> | A list of messages sent between controllers. |
+| numberOfCurrentFlights | int | The current number of flights active in the sector. |
 
 ##### SectorManager
-Description: 
+The SectorManager class is responsible for categorizing objects into ControlSectors and reporting on those objects to other sectors. Concurrent hash maps are used to both ensure thread safety and to enable O(1) access to control sectors, O(1) access to objects within a sector and O(m) access to objects globally, where m is the number of sectors.
 
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| addFlight | void addFlight(Flight flight) |  |
-| removeFlight | void removeFlight(Flight flight) |  |
-| addArea | void addArea(Area area) |  |
-| removeArea | void removeArea(Area area) |  |
-| addWaypoint | void addWaypoint(Waypoint waypoint) |  |
-| removeWaypoint | void removeWaypoint(Waypoint waypoint) |  |
-| handleUpdatedSectors | void handleUpdatedSectors(List<ControlSector> updatedSector) |  |
-| mergeSectors | void mergeSectors(ControlSector consumingSector, List<ControlSector> sectorsGoingAway) |  |
-| getSectorById | ControlSector getSectorById(long id) |  |
-| getSectorFlights | ConcurrentHashMap<long, Flight> getSectorFlights(ControlSector sector) |  |
-| getFlightById | Flight getFlightById(long id) |  |
-| getSectorWarnings | ArrayList<FlightWarning> getSectorWarnings(ControlSector sector) |  |
-| changeFlightToSector | void changeFlightToSector(Flight flight, ControlSector newSector) |  |
-
-###### Properties
-| Property Name | Type | Description |
-|--|--|--|
-| sectors | ConcurrentHashMap<long, ControlSector> |  |
-| flightMap | ConcurrentHashMap<long, ConcurrentHashMap<long, Flight>> |  |
-| areas | ConcurrentHashMap<long, ConcurrentHashMap<long, Area>> |  |
-| waypoints | ConcurrentHashMap<long, ConcurrentHashMap<long, Waypoint>> |  |
+| addFlight | void addFlight(Flight flight) | Adds a flight to the system and categorizes it into the correct sector based on its takeoff location. |
+| removeFlight | void removeFlight(Flight flight) | Removes a flight from the system after it has completed. |
+| addArea | void addArea(Area area) | Adds an area to the system and categorizes it into the correct sector(s) |
+| removeArea | void removeArea(Area area) | Removes an area from the system. |
+| addWaypoint | void addWaypoint(Waypoint waypoint) | Adds a waypoint to the system and categorizes it into the correct sector |
+| removeWaypoint | void removeWaypoint(Waypoint waypoint) | Removes a waypoint from the system |
+| handleUpdatedSectors | void handleUpdatedSectors(List<ControlSector> updatedSector) | When sector boundaries change, updates the objects owned by the updated sectors. |
+| mergeSectors | void mergeSectors(ControlSector consumingSector, List<ControlSector> sectorsGoingAway) | Merges two sectors and reassigns objects as appropriate. |
+| getSectorById | ControlSector getSectorById(long id) | Returns a reference to a sector by its ID. |
+| getSectorFlights | ConcurrentHashMap<long, Flight> getSectorFlights(ControlSector sector) | Gets the flights associated with the sector. |
+| getSectorAreas | ConcurrentHashMap<long, Area> getSectorAreas(ControlSector sector) | Gets the areas associated with the sector. |
+| getSectorWaypoints | ConcurrentHashMap<long, Waypoint> getSectorWaypoints(ControlSector sector) | Gets the waypoints associated with the sector. |
+| getFlightById | Flight getFlightById(long id) | Gets a reference to a flight by its ID. |
+| getSectorWarnings | ArrayList<FlightWarning> getSectorWarnings(ControlSector sector) | Gets the warnings associated with a sector. |
+| changeFlightToSector | void changeFlightToSector(Flight flight, ControlSector newSector) | Changes a flight to a new sector. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| sectors | ConcurrentHashMap<long, ControlSector> |  |
-| flightMap | ConcurrentHashMap<long, ConcurrentHashMap<long, Flight>> |  |
-| areas | ConcurrentHashMap<long, ConcurrentHashMap<long, Area>> |  |
-| waypoints | ConcurrentHashMap<long, ConcurrentHashMap<long, Waypoint>> |  |
-
+| sectors | ConcurrentHashMap<long, ControlSector> | A map of sectors in the NGATC. |
+| flightMap | ConcurrentHashMap<long, ConcurrentHashMap<long, Flight>> | A map of flights in the NGATC, organized by sector. |
+| areas | ConcurrentHashMap<long, ConcurrentHashMap<long, Area>> | A map of areas in the NGATC, organized by sector (with duplicate entries for areas that span multiple sectors). |
+| waypoints | ConcurrentHashMap<long, ConcurrentHashMap<long, Waypoint>> | A map of waypoints in the NGATC, organized by sector. |
 
 ##### ControllerUi
-Description: 
+Represents the top level GUI used to interact with the Controller module. The class provides GUI elements common across all roles, such as system status, and uses the strategy design pattern to display information specific to a user's role. It also provides login, logout and create user functionality.
 
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| startWindow | void startWindow() |  |
-| receiveSystemStatus | void receiveSystemStatus(ArrayList<TrackedModule> moduleStatuses) |  |
+| startWindow | void startWindow() | Starts the UI, initialized to use a default window. This also starts a thread every second to update the system status and render the main window. |
+| receiveSystemStatus | void receiveSystemStatus(ArrayList<TrackedModule> moduleStatuses) | Receives a system status update. |
 
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
-| accessToken | long |  |
-| userName | String |  |
+| accessToken | long | The access token being used to access the UI. This is used to control the MainWindow being shown to the user. |
+| userName | String | The username currently signed in. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| windowStrategy | MainWindow |  |
-| moduleStatuses | ArrayList<TrackedModule> |  |
+| windowStrategy | MainWindow | The MainWindow being displayed to the user as part of the Strategy design pattern. |
+| moduleStatuses | ArrayList<TrackedModule> | The statuses of modules in the NGATC. |
 
 
 ##### MainWindow (interface)
-Description: 
+This is the interface for all windows displayed within the controller UI. It is implemented by a variety of windows, using the strategy design pattern.
 
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| renderWindow | void renderWindow() |  |
-
+| renderWindow | void renderWindow() | Renders this window. |
 
 ##### ControllerWindow
-Description: 
+This is the window used by flight controllers to interact with the NGATC.
 
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| renderMap | void renderMap() |  |
-| renderWarnings | void renderWarnings() |  |
-| renderMessages | void renderMessages() |  |
-| showFlightDetails | void showFlightDetails(Flight flight) |  |
-
-###### Properties
-| Property Name | Type | Description |
-|--|--|--|
-| sector | ControlSector |  |
+| renderMap | void renderMap() | Renders the controller map of the sector. |
+| renderWarnings | void renderWarnings() | Renders the warnings relevant to the sector. |
+| renderMessages | void renderMessages() | Renders the messages from pilots and other controllers relevant to the sector. |
+| showFlightDetails | void showFlightDetails(Flight flight) | Shows the details of a particular flight. |
 
 ###### Associations
 | Association Name | Type | Description |
 |--|--|--|
-| sector | ControlSector |  |
-| sectorManager | SectorManager |  |
-
+| sector | ControlSector | A reference to the sector being controlled. |
 
 ##### AdminWindow
-Description: 
+A window used by supervisors and administrators to manage the NGATC.
 
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| renderSectorSummaryPanel | void renderSectorSummaryPanel() |  |
-| renderAdminPanel | void renderAdminPanel() |  |
-
-###### Associations
-| Association Name | Type | Description |
-|--|--|--|
-| sectorManager | SectorManager |  |
-
+| renderSectorSummaryPanel | void renderSectorSummaryPanel() | Displays a summary of sectors and allows users to manage these sectors. |
+| renderAdminPanel | void renderAdminPanel() | Displays a panel enabling a variety of configuration actions for the NGATC. |
 
 ##### DefaultWindow
-Description: 
+Displays a window when no user is logged in, prompting users to login.
 
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| renderLoginPanel | void renderLoginPanel() |  |
-
-
-##### TrackedModule
-Description: 
-
-###### Properties
-| Property Name | Type | Description |
-|--|--|--|
-| id | String |  |
-| moduleStatus | Status |  |
-
+| renderLoginPanel | void renderLoginPanel() | Displays a login prompt to the user. |
 
 ##### ApiController
-Description: 
+The ApiController class is a singleton class used to send and receive messages through the module's REST API.
 
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| receiveNewFlightProposal | void receiveNewFlightProposal(Flight newFlight) |  |
-| receiveFlightTrackerNewFlightDecision | void receiveFlightTrackerNewFlightDecision(Flight newFlight, boolean isAccepted) |  |
-| sendFlightDecision | void sendFlightDecision(Flight newFlight, boolean isAccepted) |  |
-| receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isMandatory) |  |
-| sendFlightPlanUpdate | void sendFlightPlanUpdate(Flight flight, boolean isUrgent) |  |
-| respondToFlightPlanUpdate | void respondToFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isAccepted) |  |
-| receiveFlightWarning | void receiveFlightWarning(FlightWarning warning) |  |
-| sendMessageToPilot | void sendMessageToPilot(Flight flight, String message) |  |
-| receiveMessageFromPilot | void receiveMessageFromPilot(Flight flight, String message) |  |
-| sendMessageToSector | void sendMessageToSector(ControlSector sector, String message) |  |
-| receiveMessageFromSector | void receiveMessageFromSector(ControlSector sector, String message) |  |
-| receiveFlights | void receiveFlights() |  |
-| updateWaypoint | void updateWaypoint(Waypoint waypoint) |  |
-| removeWaypoint | void removeWaypoint(Waypoint waypoint) |  |
-| updateArea | void updateArea(Area area) |  |
-| removeArea | void removeArea(Area area) |  |
-| reportLogEvent | void reportLogEvent(LogEvent event) |  |
-
-###### Associations
-| Association Name | Type | Description |
-|--|--|--|
-| flight | Flight |  |
-| flightPlan | FlightPlan |  |
-| flightWarning | FlightWarning |  |
-| controlSector | ControlSector |  |
-| waypoint | Waypoint |  |
-| area | Area |  |
-| logEvent | LogEvent |  |
-
-
-##### LogEvent
-Description: 
-
-###### Methods
-| Method Name | Method Signature | Description |
-|--|--|--|
-| LogEvent | LogEvent(Severity severity, String source, String info, Instance timestamp) |  |
-
-###### Properties
-| Property Name | Type | Description |
-|--|--|--|
-| severity | Severity |  |
-| source | String |  |
-| info | String |  |
-| id | int |  |
-| timestamp | java.time.Instant |  |
+| receiveNewFlightProposal | void receiveNewFlightProposal(Flight newFlight) | Receives a proposed flight and adds the flight in the SectorManager. |
+| receiveFlightTrackerNewFlightDecision | void receiveFlightTrackerNewFlightDecision(Flight newFlight, boolean isAccepted) | Receives an accept/reject decision from the Flight Tracker module and uses that decision to send a decision to the pilot using sendFlightDecision and update the status of the flight in the Controller module. |
+| sendFlightDecision | void sendFlightDecision(Flight newFlight, boolean isAccepted) | Sends the acceptance or rejection of a new flight to the pilots. |
+| receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isMandatory) | Receives a flight plan update from the FlightTracker module and updates the Flight with the proposed plan in the Controller module, for a controller to accept or reject. If the update is marked as mandatory (e.g. emergency conflict resolution), the update is accepted automatically. |
+| sendFlightPlanUpdate | void sendFlightPlanUpdate(Flight flight, boolean isUrgent) | Sends an updated flight plan to the pilots and Flight Tracker module. |
+| respondToFlightPlanUpdate | void respondToFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isAccepted) | Responds to the Flight Tracker module with weather a FlightPlan update was accepted. |
+| receiveFlightWarning | void receiveFlightWarning(FlightWarning warning) | Receives a warning from the Flight Tracker module. |
+| sendMessageToPilot | void sendMessageToPilot(Flight flight, String message) | Sends a message to a pilot. |
+| receiveMessageFromPilot | void receiveMessageFromPilot(Flight flight, String message) | Receives a message from a pilot and adds the message to the appropriate sector. |
+| sendMessageToSector | void sendMessageToSector(ControlSector sector, String message) | Sends a message to another sector encoded with the source sector. |
+| receiveMessageFromSector | void receiveMessageFromSector(ControlSector sector, String message) | Receives a messages from another sector and adds it to the target sector. |
+| receiveFlights | void receiveFlights() | Receives all the currently active flights from the Flight Tracker module. |
+| updateWaypoint | void updateWaypoint(Waypoint waypoint) | Receives an updated waypoint from the Static Map module. |
+| removeWaypoint | void removeWaypoint(Waypoint waypoint) | Receives the removal of a waypoint from the Static Map module. |
+| updateArea | void updateArea(Area area) | Receives an updated area from the Static Map module. |
+| removeArea | void removeArea(Area area) | Receives the removal of an area from the Static Map module. |
+| reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event to the System Monitor module. |
