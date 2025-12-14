@@ -370,7 +370,6 @@ component Controller as control
 component "Flight Tracker" as tracker
 component "System Monitor" as monitor
 component "Static Map" as map
-component "Aircraft Info" as info
 component Simulator as sim
 
 interface "Flight Data" as data
@@ -380,7 +379,6 @@ interface "Pilot Messages" as msg
 control --> tracker : Get flight data.\nSubmit flight plans.
 control --> weather : Get weather data for map
 control --> map : Get static map elements for controller map
-control --> info : Get aircraft info to display
 tracker --> weather : Get weather info for flight planning
 tracker --> map : Get static hazards for flight planning
 tracker --> info : Get aircraft properties for flight planning
@@ -405,7 +403,7 @@ control ----> msg
 The System Monitor is responsible for monitoring the health of all modules in the NGATC system. The system monitor consumes the health of each module in the NGATC and produces an interface for modules (the Administrator and Controller, although there is nothing to preclude other modules from consuming this interface) to gain information about the NGATC system health.
 
 ### Controller
-The Controller module is the primary interface that flight controllers will directly interact with. This module exposes a GUI to flight controllers that shows aircraft light data, weather, map information and aircraft type information. The Controller module consumes this information from the Flight Tracker, Static Map, Aircraft Info and Weather subsystems. This module allows bidirectional communication between pilots and controllers, as well as between multiple controllers. It also provides alert information to controllers, as well as AI generated suggestions.
+The Controller module is the primary interface that flight controllers will directly interact with. This module exposes a GUI to flight controllers that shows aircraft light data, weather, map information and aircraft type information. The Controller module consumes this information from the Flight Tracker, Static Map and Weather modules. This module allows bidirectional communication between pilots and controllers, as well as between multiple controllers. It also provides alert information to controllers, as well as AI generated suggestions.
 
 The Controller module also allows administrators and supervisors to configure airspace sectors.
 
@@ -415,9 +413,6 @@ Finally, the controller module allows pilots to have encrypted communication wit
 The Flight Tracker module is a safety critical module responsible for consuming all data related to aircraft flights and providing this information to the Controller module. In addition to consuming data, the Flight Tracker module has the responsibility to detect aircraft conflicts and any other unsafe conditions, and to respond appropriately. The module also uses an AI agent to make adjustments to flight plans, using safety critical code to detect for any hazards.
 
 As the safety critical module of the NGATC, the Flight Tracker module shall be developed in compliance with [Systematic Capability 3](https://www.exida.com/blog/Back-to-Basics-14-Systematic-Capability) as defined in [IEC 61508-3](https://www.exida.com/Blog/back-to-basics-06-iec-61508).
-
-### Aircraft Info
-The Aircraft Info module is responsible for managing information related to aircraft types, such as their maximum and minimum speeds, ceilings and fuel capacity. This information is consumed by the Flight Tracker module. This information is also exposed in a GUI and can be configured through this GUI by administrators.
 
 ### Weather
 The Weather module is responsible for ingesting weather reports and providing this information to the Flight Tracker.
@@ -475,14 +470,11 @@ scale max 800 width
 actor Pilot as pilot
 participant "Controller" as control
 participant "Flight Tracker" as tracker
-participant "Aircraft Info" as info
 participant "Weather" as weather
 participant "Static Map" as map
 
 pilot -> control : Post new flight plan
 control -> tracker : Validate new flight plan
-tracker -> info : Get info on aircraft type for validation
-info --> tracker
 tracker -> weather : Get weather info for validation
 weather --> tracker
 tracker -> map : Get map info for validation
@@ -545,7 +537,7 @@ Module testing validates an individual module's behavior. It is performed by ing
 System testing is used to validate the NGATC's behavior as a "closed box". In system tests, the data for the NGATC to act upon are simulated through the Simulation module and user interactions with system GUIs are simulated using [Functionize](https://www.functionize.com/?_gl=1*12iaepr*_up*MQ..*_ga*MTMyMzYyNjUzMi4xNzY1MzEwMDI0*_ga_77JHMZYNHZ*czE3NjUzMTAwMjMkbzEkZzAkdDE3NjUzMTAwMjMkajYwJGwwJGgyMDExNDMyMDUy).
 
 #### Happy Path Test
-* Mock weather, map and aircraft type data are input through the simulator and the Aircraft Info GUI
+* Mock weather, map and aircraft type data are input through the simulator
 * Multiple flight plans are submitted that should be accepted
 * It is validated that these flight plans are accepted
 * The NGATC waits until an AI route optimization is suggested
@@ -558,7 +550,7 @@ System testing is used to validate the NGATC's behavior as a "closed box". In sy
 
 #### Loss of Separation Test
 This test validates that the system responds properly to aircraft loss of separation events with other aircraft and static hazards.
-* Mock weather, map and aircraft type data are input through the simulator and the Aircraft Info GUI
+* Mock weather, map and aircraft type data are input through the simulator
 * Multiple flight plans are submitted that should be accepted
 * It is validated that these flight plans are accepted
 * The simulator injects flight surveillance data that should indicate a loss of separation between two aircraft
@@ -567,7 +559,7 @@ This test validates that the system responds properly to aircraft loss of separa
 * It is validated that the system responds correctly to this loss of separation
 
 #### Invalid Flight Plan Test
-* Mock weather, map and aircraft type data are input through the simulator and the Aircraft Info GUI
+* Mock weather, map and aircraft type data are input through the simulator
 * Multiple flight plans are submitted that should be rejected
 * It is validated that these flight plans are rejected and not added to the NGATC system.
 
