@@ -1340,6 +1340,7 @@ class TrackedModule {
 
 class ApiController << (S,#FF7700) Singleton >> {
     + void receiveNewFlightProposal(Flight newFlight)
+    + void forwardNewFlightProposal(Flight newFlight)
     + void receiveFlightTrackerNewFlightDecision(Flight newFlight, boolean isAccepted)
     + void sendFlightDecision(Flight newFlight, boolean isAccepted)
     + void receiveFlightPlanUpdate(Flight flight, boolean isMandatory)
@@ -1752,6 +1753,7 @@ The ApiController class is a singleton class used to send and receive messages t
 | Method Name | Method Signature | Description |
 |--|--|--|
 | receiveNewFlightProposal | void receiveNewFlightProposal(Flight newFlight) | Receives a proposed flight and adds the flight in the SectorManager. |
+| forwardNewFlightProposal | void forwardNewFlightProposal(Flight newFlight) | Sends a new flight proposal to the Flight Tracker module for final acceptance. |
 | receiveFlightTrackerNewFlightDecision | void receiveFlightTrackerNewFlightDecision(Flight newFlight, boolean isAccepted) | Receives an accept/reject decision from the Flight Tracker module and uses that decision to send a decision to the pilot using sendFlightDecision and update the status of the flight in the Controller module. |
 | sendFlightDecision | void sendFlightDecision(Flight newFlight, boolean isAccepted) | Sends the acceptance or rejection of a new flight to the pilots. |
 | receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight, boolean isMandatory) | Receives a flight plan update from the FlightTracker module and updates the Flight with the proposed plan in the Controller module, for a controller to accept or reject. If the update is marked as mandatory (e.g. emergency conflict resolution), the update is accepted automatically. |
@@ -1819,3 +1821,41 @@ The Controller module implements the following API services:
     * Inputs:
         * Statuses: A list of TrackedModules in JSON encoding
     * Output: HTTP status
+
+### Sequence Diagram
+The following sequence diagram shows the commissioning of a hypothetical flight with emphasis on the Controller module.
+
+```plantuml
+@startuml
+title Controller Module View of Commissioning a New Flight
+
+actor Pilot as pilot
+actor "Flight Tracker Module" as ft
+participant ApiController as api
+participant SectorManager as mgr
+participant "ControllerWindow:\nsector1ControllerWindow" as ui
+participant "Flight:\nNewFlight" as flight
+
+pilot -> api : New Flight Proposal
+api -> api : receiveNewFlightProposal(newFlight)
+api -> mgr : addFlight(newFlight)
+alt Flight Accepted
+    ui -> api: forwardNewFlightProposal(newFlight)
+else Flight Rejected
+    ui -> api: sendFlightDecision(newFlight, false)
+    ui -> mgr : removeFlight(newFlight)
+end
+ft -> api : Send New Flight Decision
+api -> api : receiveFlightTrackerNewFlightDecision(newFlight, decision)
+alt Flight Accepted
+    api -> flight : acceptFlight()
+    api -> api : sendFlightDecision(newFlight, true)
+else Flight Rejected
+    api -> mgr : removeFlight(newFlight)
+    api -> api : sendFlightDecision(newFlight, false)
+end
+
+@enduml
+```
+
+This diagram shows how a flight is first accepted by a human flight controller and then sent to the Flight Tracker module for automated processing of the flight plan, before the accept/reject decision is communicated back to the pilots.
