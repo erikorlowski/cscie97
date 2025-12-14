@@ -503,7 +503,7 @@ The thunderstorm route adjustment contrasts with the resolution guidance created
 The NGATC is deployed through Kubernetes, with each module being deployed along with its database. Multiple instances of each module are deployed to allow for redundant switchover and automatic load balancing handled automatically by Kubernetes. To ensure resilience against any physical events, instances of each module are commissioned at disparate geographic locations.
 
 ## Access Control
-Access control for the NGATC will utilize the Entitlement Service developed by Housemate Inc. The four roles defined for the NGATC are controllers, supervisors, administrators and internal modules. For all actions in the NGATC that are not "read-only", some level of authenticated access is required, with specifics discussed in the requirements and design details.
+Access control for the NGATC will utilize the Entitlement Service developed by Housemate Inc. The four roles defined for the NGATC are controllers, supervisors, administrators, pilots and internal modules. For all actions in the NGATC that are not "read-only", some level of authenticated access is required, with specifics discussed in the requirements and design details.
 
 ## Persistence Strategy
 For each module, all information needed to restore to the current running point in the event of failure is stored persistently in a database, accessed using Hibernate. For classes that must be persisted, the module level designs outline what property in the class maps to the primary key that relates the object to the persistent database.
@@ -1777,49 +1777,60 @@ The Controller module implements the following API services:
 * New Flight Proposal
     * Inputs:
         * Flight: The Flight in JSON encoding
+        * Access Token: Requires a Pilot role
     * Output: HTTP Status, the accept/reject decision will be communicated asynchronously
 * Flight Tracker New Flight Decision:
     * Inputs:
         * Flight: The Flight in JSON encoding
         * Is Accepted: A boolean representing whether the new flight was accepted
+        * Access Token: Requires an internal module role
     * Output: HTTP status
 * Update Flight Plan:
     * Inputs:
         * Flight: The Flight in JSON Encoding
         * Is Mandatory: Whether updating the Flight Plan is mandatory (e.g. emergency conflict resolution)
+        * Access Token: Requires an internal module role
     * Output: HTTP status
 * Flight Warning:
     * Inputs:
         * Warning: A FlightWarning in JSON encoding
+        * Access Token: Requires an internal module role
     * Output: HTTP status
 * Receive Pilot Message:
     * Inputs:
         * Flight: The Flight in JSON encoding
         * Message: The message to be sent
+        * Access Token: Requires a Pilot role
     * Output: HTTP status
 * Update Flights:
     * Inputs:
         * Flights: All currently active flights in JSON encoding
+        * Access Token: Requires an internal module role
     * Output: HTTP status
 * Update Waypoint:
     * Inputs:
         * Waypoint: The updated Waypoint in JSON encoding
+        * Access Token: Requires an internal module role
     * Output: HTTP status
 * Remove Waypoint:
     * Inputs:
         * Waypoint: The removed Waypoint in JSON encoding
+        * Access Token: Requires an internal module role
     * Output: HTTP status
 * Update Area:
     * Inputs:
         * Area: The updated Area in JSON encoding
+        * Access Token: Requires an internal module role
     * Output: HTTP status
 * Remove Area:
     * Inputs:
         * Area: The removed Area in JSON encoding
+        * Access Token: Requires an internal module role
     * Output: HTTP status
 * Update Module Statuses:
     * Inputs:
         * Statuses: A list of TrackedModules in JSON encoding
+        * Access Token: Requires an internal module role
     * Output: HTTP status
 
 ### Sequence Diagram
@@ -1859,3 +1870,26 @@ end
 ```
 
 This diagram shows how a flight is first accepted by a human flight controller and then sent to the Flight Tracker module for automated processing of the flight plan, before the accept/reject decision is communicated back to the pilots.
+
+### Entitlement Service Integration
+The entitlement service is used to support login/logout and create user functionality for the Controller module UI. The entitlement service is also used to verify proper access levels for all Controller module API calls.
+
+### Object Persistence
+Object persistence is handled through the Hibernate framework, with API primary keys documented in the class dictionary.
+
+### Testing Strategy
+The module level testing for the Controller module is described below:
+
+* New Flight Test:
+    * A flight is proposed that is rejected by the controller
+    * A flight is proposed that is accepted by the controller and rejected by the Flight Tracker module (simulated by the testing framework)
+    * A flight is proposed that is accepted by both the controller and Flight Tracker module
+* Flight Update Test:
+    * A mandatory flight update is proposed by the Flight Tracker module
+    * An optional flight update is proposed by the Flight Tracker module and accepted by the flight controller
+    * An optional flight update is proposed by the Flight Tracker module and rejected by the flight controller
+* Sector Reassignment Test:
+    * Flight updates are send by the Flight Tracker module
+    * A flight is "dragged and dropped" by a flight controller to another sector
+    * Two sectors are merged by an administrator
+    * A sector is split by an administrator
