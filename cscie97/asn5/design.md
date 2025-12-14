@@ -180,7 +180,7 @@ The following section discusses the system level requirements of the NGATC. More
 
 | Requirement: Module Health Monitoring |
 |--|
-| The NGATC shall provide health monitoring for each module, visible to administrators. |
+| The NGATC shall provide health monitoring for each module, visible to administrators, supervisors and controllers. |
 
 | Requirement: Service Unavailable Alert |
 |--|
@@ -400,7 +400,7 @@ control ----> msg
 ```
 
 ### System Monitor
-The System Monitor is responsible for monitoring the health of all modules in the NGATC system. The system monitor consumes the health of each module in the NGATC and produces an interface for modules (the Administrator and Controller, although there is nothing to preclude other modules from consuming this interface) to gain information about the NGATC system health.
+The System Monitor is responsible for monitoring the health of all modules in the NGATC system. The system monitor consumes the health of each module in the NGATC and produces an interface for modules (the Controller module, although there is nothing to preclude other modules from consuming this interface) to gain information about the NGATC system health.
 
 ### Controller
 The Controller module is the primary interface that flight controllers will directly interact with. This module exposes a GUI to flight controllers that shows aircraft light data, weather, map information and aircraft type information. The Controller module consumes this information from the Flight Tracker, Static Map and Weather modules. This module allows bidirectional communication between pilots and controllers, as well as between multiple controllers. It also provides alert information to controllers, as well as AI generated suggestions.
@@ -418,7 +418,7 @@ As the safety critical module of the NGATC, the Flight Tracker module shall be d
 The Weather module is responsible for ingesting weather reports and providing this information to the Flight Tracker.
 
 ### Static Map
-The Static Map module is responsible for managing the airspace map, including static hazards (e.g. mountains and tall buildings), restricted airspace and landmarks (e.g. airports). This information is consumed by the Flight Tracker module. This information is also exposed in a GUI and can be configured through this GUI by administrators.
+The Static Map module is responsible for managing the airspace map, including static hazards (e.g. mountains and tall buildings), restricted airspace and landmarks (e.g. airports). This information is consumed by the Flight Tracker and Controller modules.
 
 ### Simulator
 The Simulator module is responsible for providing mock data to the modules of the NGATC, as well as consuming information from the NGATC to inform this mock data. Furthermore, the Simulator module will report to the modules that are consuming it whether the system is in production or simulated mode. An administrator can interact with the Simulator module through a command line interface to enable and disable simulation mode.
@@ -1294,7 +1294,7 @@ class ControllerUi {
     - long accessToken
     - String userName
     - MainWindow windowStrategy
-    + void startWindow()
+    + void renderWindow()
     + void receiveSystemStatus(ArrayList<TrackedModule> moduleStatuses)
 }
 
@@ -1689,7 +1689,7 @@ Represents the top level GUI used to interact with the Controller module. The cl
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| startWindow | void startWindow() | Starts the UI, initialized to use a default window. This also starts a thread every second to update the system status and render the main window. |
+| render | void renderWindow() | Updates the UI with the main window indicated by the windowStrategy. This also starts a thread every second to update the system status render the main window, and update night/day mode. |
 | receiveSystemStatus | void receiveSystemStatus(ArrayList<TrackedModule> moduleStatuses) | Receives a system status update. |
 
 ###### Properties
@@ -1711,7 +1711,7 @@ This is the interface for all windows displayed within the controller UI. It is 
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| renderWindow | void renderWindow() | Renders this window. |
+| renderWindow | void renderWindow() | Renders this window, taking into account the time of day to decide between night and day mode. |
 
 ##### ControllerWindow
 This is the window used by flight controllers to interact with the NGATC.
@@ -1893,3 +1893,29 @@ The module level testing for the Controller module is described below:
     * A flight is "dragged and dropped" by a flight controller to another sector
     * Two sectors are merged by an administrator
     * A sector is split by an administrator
+
+### Risks
+Many of the risks that would typically be considered in an air traffic control system have been segregated out of this module by leaving it separate from the Flight Tracker module. This leaves much of the flight validation and conflict detection in its own module. A risk in this module is that it is responsible for communicating with pilots, and any outage of this communication could have significant consequences. For this reason, redundant instances of this module are commissioned in Kubernetes, which mitigates the risk of a communications failure.
+
+Another risk is the security risk of unauthorized users interacting with the module. For this reason, all meaningful UI and API interactions with this module are access controlled through the Entitlement Service.
+
+### UI Wireframes
+The Base Controller UI, which contains the main window is displayed below. This window, like all others, has a night and day mode and is responsible for displaying system information and Create User (only when an Admin is signed in) and Logout options (when applicable). When a user clicks on Create User, a dialog box will appear.
+
+![Controller UI Wireframe](./ControllerUI.jpg)
+
+The create user dialog box is shown below:
+
+![Create User Dialog Box](./CreateUser.jpg)
+
+The Controller window is the window that flight controllers interact with the control flights. It is shown below. Of note, this interface supports the drag and drop transfer of aircraft between sectors. Also of note is that messages are color coded between read and unread and warnings are color coded by severity.
+
+![Flight Controller Wireframe](./Controller.jpg)
+
+The Administrator window is displayed to administrators and supervisors. It is shown below. Note that on the configuration panel on the right, supervisor users will only have read-only access to this table.
+
+![Admin Wireframe](./Admin.jpg)
+
+The default window, which is displayed to users who are not logged in, is displayed below:
+
+![Default Wireframe](./Default.jpg)
