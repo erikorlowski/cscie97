@@ -2297,3 +2297,289 @@ LogEvent --> Severity
 ```
 
 #### Class Dictionary
+##### Flight
+The Flight class is the top level class that encapsulates all information relating to an individual flight.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| acceptFlightPlanUpdate | void acceptFlightPlanUpdate() | Accepts a proposed edit to the Flight's FlightPlan and replaces the flightPlan with the proposedUpdateToFlightPlan and communicates the updated plan to the pilot. |
+| acceptFlight | void acceptFlight() | Signals that a new flight has been accepted into the NGATC and communicates the acceptance to the pilot. |
+| addFlightLogEntry | void addFlightLogEntry(FlightLogEntry entry) | Adds an entry in the flight's log. |
+| proposeNewFlightPlan | void proposeNewFlightPlan(FlightPlan proposedFlightPlan) | Adds a new flight plan proposal to the flight. |
+| updateFlight | void updateFlight(FlightDynamics newDynamics) | Updates a Flight with updated FlightDynamics. |
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A globally unique ID used as the primary key in the database. |
+| departureTime | java.time.Instant | The time the flight has departed or is planning to depart. |
+| eta | java.time.Instant | The time the flight is expecting to land. |
+| flightStatus | String | The current status (e.g. "Not Departed", "In Progress", "Landed") of the flight. |
+| passengerCount | int | The number of passengers the flight is carrying. |
+| fuelAmountPounds | double | The current amount of fuel in pounds. |
+| availableFlightTimeSeconds | double | The amount of time the aircraft can fly given the current fuel, altitude and speed. |
+| remainingFlightTimeSeconds | double | The amount of time remaining in the current flight plan. |
+| isFlightAccepted | boolean | Whether the flight has been accepted by air traffic control. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| flightPlan | FlightPlan | The currently active flight plan. |
+| proposedUpdateToFlightPlan | FlightPlan | A proposed updated flight plan to be evaluated. |
+| requestedFlightDynamics | FlightDynamics | The flight dynamics the aircraft is requested to observe. |
+| actualFlightDynamics | FlightDynamics | The actual flight dynamics of the aircraft. |
+| aircraft | Aircraft | Information about the aircraft flying the flight. |
+| flightLogEntries | ArrayList<FlightLogEntry> | The log entries from the flight. |
+| manifest | Manifest | The flight manifest. |
+
+
+##### FlightPlan
+The route, departure time and ETA of a flight.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A unique identifier of the flight plan, used as the primary key in the database. |
+| departureTime | java.time.Instant | The time the flight is planned to depart. |
+| eta | java.time.Instant | The time the flight is planned to land. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| waypoints | ArrayList<Waypoint> | A list of waypoints the flight is planned to follow. |
+
+
+##### FlightDynamics
+Information giving the current attitude, heading and speed of the aircraft.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| attitude | double | The attitude of the aircraft in degrees. 0 degrees is horizontal and positive degrees are climbing. |
+| heading | double | The heading relative to magnetic north, with 0 degrees corresponding to north. |
+| speedKnots | double | The speed of the aircraft in knots. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| location | Location | The current location of the aircraft. |
+| trajectory | Trajectory | The current trajectory of the aircraft. |
+| targetWaypoint | Waypoint | The waypoint the aircraft is flying toward. |
+
+
+##### Location
+A GPS coordinate with an altitude.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| latitude | double | The GPS latitude with north as positive. |
+| longitude | double | The GPS longitude with east as positive. |
+| altitudeFeet | double | The altitude in feet above sea level. |
+
+
+##### Benchmark
+A Location augmented with a time, used to create Trajectories.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| time | java.time.Instant | The time the location will be reached. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| location | Location | The location that will be reached. |
+
+
+##### Trajectory
+A list of time/location benchmarks describing a flight's trajectory.
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| benchmarks | LinkedList<Benchmark> | A list of benchmarks for the trajectory. |
+
+
+##### Aircraft
+The Aircraft class represents information about a particular aircraft making a flight.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A globally unique ID for the aircraft, used as the primary key in the database. |
+| readiness | String | A String representing the readiness of the aircraft. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| model | AircraftModel | The model of the aircraft (e.g. Boeing 737-700) |
+| flightLog | FlightLog | A log of flights made by the aircraft. |
+
+
+##### AircraftModel
+The AircraftModel class represents a specific model of Aircraft (e.g. Boeing 737-700).
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A globally unique ID of the aircraft model |
+| manufacturer | String | The manufacturer of the aircraft model (e.g. AirBus) |
+| type | String | The type of aircraft (e.g. Dual Engine, Single Aisle) |
+| ceilingFeet | double | The height altitude above sea level the aircraft model can fly at. |
+| stallSpeedKnots | double | The minimum speed the aircraft can fly without stalling. |
+| cruisingSpeedKnots | double | The optimal speed for the aircraft to cruise at. |
+| maxSpeedKnots | double | The maximum speed the aircraft is capable of flying at. |
+| passengerCapacity | int | The maximum number of passengers the aircraft can carry. |
+| fuelCapacityPounds | double | The fuel capacity of the aircraft. |
+| rangeMiles | double | The maximum number of miles the aircraft can fly. |
+
+
+##### FlightLog
+A list of flight log entries.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A globally unique ID of the flight log, used as the primary key in the database. |
+| startDate | java.time.Instant | The time the flight log was created. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| flightLogEntries | LinkedList<FlightLogEntry> | A list of entries into the flight log. |
+
+
+##### FlightLogEntry
+An individual entry into the flight log.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A globally unique ID of the entry, used as the primary key in the database. |
+| flightRecord | String | The message to record. |
+
+##### Waypoint
+Describes a location augmented with a name.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A globally unique ID of the waypoint, used as the primary key in the database. |
+| name | String | The name of the waypoint. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| location | Location | The location of the waypoint. |
+
+##### FlightWarning
+A class used to describe types of warnings that could occur during a flight.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A globally unique ID, used as the primary key in the database. |
+| time | java.time.Instant | The time the warning occurred. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| severity | Severity | The severity of the warning. |
+| flightsInDanger | ArrayList<Flight> | A list of the flights in danger with regards to the warning. |
+
+
+##### MidAirCollisionWarning
+A type of FlightWarning of an aircraft colliding with another aircraft in midair.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| timeBeforeCollisionSeconds | double | The number of seconds before collision. |
+| distanceToCollisionMiles | double | The number of miles until the projected collision. |
+| counterMeasureInstructions | String | The instructions provided to pilots to avoid the collision. |
+
+
+##### ObstructionWarning
+A type of FlightWarning of an aircraft colliding with a static hazard.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| timeBeforeCollisionSeconds | double | The number of seconds before collision. |
+| distanceToCollisionMiles | double | The number of miles until the projected collision. |
+| counterMeasureInstructions | String | The instructions provided to pilots to avoid the collision. |
+
+##### DeviationWarning
+A type of FlightWarning indicating that a flight has made a significant deviation from its flight plan.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| message | String | A message explaining the deviation. |
+
+
+##### Area
+Represents an area in the NGATC system.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A globally unique ID, used as the primary key in the database. |
+| type | String | A String indicating the type of area. |
+| radiusMiles | double | The radius of the area in miles. |
+| name | String | The name of the area. |
+| description | String | A description of the area. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| boundaries | ArrayList<Location> | An ordered list of the boundaries of the area. |
+
+##### Airspace
+A type of area describing a volume of airspace.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| upperLimitFeet | double | The upper limit of airspace altitude. |
+| lowerLimitFeet | double | The lower limit of the airspace altitude. |
+
+
+##### RestrictedAirspace
+A type of Airspace that is restricted for civil aviation.
+
+##### SevereWeather
+A type of Airspace experiencing hazardous weather conditions for flight.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| expirationTime | java.time.Instant | The time the weather will expire. |
+| warningDescription | String | A description of the severe weather. |
+
+##### ApiController
+The ApiController class is a singleton class used to send and receive messages through the module's REST API.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| receiveNewFlightProposal | void receiveNewFlightProposal(Flight newFlight) | Receives a proposed flight and adds the flight in the SectorManager. |
+| forwardNewFlightProposal | void forwardNewFlightProposal(Flight newFlight) | Sends a new flight proposal to the Flight Tracker module for final acceptance. |
+| receiveFlightTrackerNewFlightDecision | void receiveFlightTrackerNewFlightDecision(Flight newFlight, boolean isAccepted) | Receives an accept/reject decision from the Flight Tracker module and uses that decision to send a decision to the pilot using sendFlightDecision and update the status of the flight in the Controller module. |
+| sendFlightDecision | void sendFlightDecision(Flight newFlight, boolean isAccepted) | Sends the acceptance or rejection of a new flight to the pilots. |
+| receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight, boolean isMandatory) | Receives a flight plan update from the FlightTracker module or pilot and updates the Flight with the proposed plan in the Controller module, for a controller to accept or reject. If the update is marked as mandatory (e.g. emergency conflict resolution), the update is accepted automatically. |
+| sendFlightPlanUpdate | void sendFlightPlanUpdate(Flight flight, boolean isUrgent) | Sends an updated flight plan to the pilots and Flight Tracker module. |
+| respondToFlightPlanUpdate | void respondToFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isAccepted) | Responds to the Flight Tracker module with weather a FlightPlan update was accepted. |
+| receiveFlightWarning | void receiveFlightWarning(FlightWarning warning) | Receives a warning from the Flight Tracker module. |
+| sendMessageToPilot | void sendMessageToPilot(Flight flight, String message) | Sends a message to a pilot. |
+| receiveMessageFromPilot | void receiveMessageFromPilot(Flight flight, String message) | Receives a message from a pilot and adds the message to the appropriate sector. |
+| sendMessageToSector | void sendMessageToSector(ControlSector sector, String message) | Sends a message to another sector encoded with the source sector. |
+| receiveFlights | void receiveFlights() | Receives all the currently active flights from the Flight Tracker module, updates their FlightDynamics and ensures they are in the correct sector. |
+| updateWaypoint | void updateWaypoint(Waypoint waypoint) | Receives an updated waypoint from the Static Map module. |
+| removeWaypoint | void removeWaypoint(Waypoint waypoint) | Receives the removal of a waypoint from the Static Map module. |
+| updateArea | void updateArea(Area area) | Receives an updated area from the Static Map module. |
+| removeArea | void removeArea(Area area) | Receives the removal of an area from the Static Map module. |
+| reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event to the System Monitor module. |
+| receiveModuleStatuses | void receiveModuleStatuses(ArrayList<TrackedModule>) | Receives the status of all NGATC modules. |
