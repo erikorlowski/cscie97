@@ -94,16 +94,12 @@ The following section discusses the system level requirements of the NGATC. More
 #### Conflict Detection and Safety Alerts
 | Requirement: Loss of Separation Detection |
 |--|
-| The NGATC shall detect any loss of separation conflict with other aircraft or with static hazards with a [Probability of Failure on Demand](https://www.exida.com/blog/back-to-basics-16-pfdavg) of less than 0.001. |
+| The NGATC shall detect any loss of separation conflict with other aircraft or with static hazards. |
 
 | Requirement: Loss of Separation Alert to Aircraft |
 |--|
 | Upon detection of loss of separation, the NGATC shall provide an alert to the involved aircraft including [the position, altitude, heading, and vertical and horizontal speeds] of both aircraft, and avoidance guidance (both aircrafts' avoidance guidance are sent to both aircraft) within 100 ms. |
 | Rationale: In loss of separation incidents, it is unacceptable to rely solely on the reaction time of a human operator. Therefore, it is preferable to trust the initial task of alerting the involved aircraft to automated systems. |
-
-| Requirement: Loss of Separation Alert Integrity |
-|--|
-| To allow aircraft to verify the integrity of loss of separation alerts, the communication from the NGATC shall include a 32 bit CRC for every 4096 bits of data sent and a timestamp (in milliseconds past the Unix Epoch) of when the message was initiated, with an accompanying 32 bit CRC. This communication shall be sent 3 times to increase the chances of all involved aircraft receiving a valid communication. |
 
 | Requirement: Loss of Separation Alert to Controller |
 |--|
@@ -1756,7 +1752,7 @@ The ApiController class is a singleton class used to send and receive messages t
 | forwardNewFlightProposal | void forwardNewFlightProposal(Flight newFlight) | Sends a new flight proposal to the Flight Tracker module for final acceptance. |
 | receiveFlightTrackerNewFlightDecision | void receiveFlightTrackerNewFlightDecision(Flight newFlight, boolean isAccepted) | Receives an accept/reject decision from the Flight Tracker module and uses that decision to send a decision to the pilot using sendFlightDecision and update the status of the flight in the Controller module. |
 | sendFlightDecision | void sendFlightDecision(Flight newFlight, boolean isAccepted) | Sends the acceptance or rejection of a new flight to the pilots. |
-| receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight, boolean isMandatory) | Receives a flight plan update from the FlightTracker module and updates the Flight with the proposed plan in the Controller module, for a controller to accept or reject. If the update is marked as mandatory (e.g. emergency conflict resolution), the update is accepted automatically. |
+| receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight, boolean isMandatory) | Receives a flight plan update from the FlightTracker module or pilot and updates the Flight with the proposed plan in the Controller module, for a controller to accept or reject. If the update is marked as mandatory (e.g. emergency conflict resolution), the update is accepted automatically. |
 | sendFlightPlanUpdate | void sendFlightPlanUpdate(Flight flight, boolean isUrgent) | Sends an updated flight plan to the pilots and Flight Tracker module. |
 | respondToFlightPlanUpdate | void respondToFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isAccepted) | Responds to the Flight Tracker module with weather a FlightPlan update was accepted. |
 | receiveFlightWarning | void receiveFlightWarning(FlightWarning warning) | Receives a warning from the Flight Tracker module. |
@@ -1910,6 +1906,8 @@ The create user dialog box is shown below:
 
 The Controller window is the window that flight controllers interact with the control flights. It is shown below. Of note, this interface supports the drag and drop transfer of aircraft between sectors. Also of note is that messages are color coded between read and unread and warnings are color coded by severity.
 
+The map allows flight controllers to amend the flight plan by clicking on an aircraft and dragging and dropping waypoints.
+
 ![Flight Controller Wireframe](./Controller.jpg)
 
 The Administrator window is displayed to administrators and supervisors. It is shown below. Note that on the configuration panel on the right, supervisor users will only have read-only access to this table.
@@ -1919,3 +1917,287 @@ The Administrator window is displayed to administrators and supervisors. It is s
 The default window, which is displayed to users who are not logged in, is displayed below:
 
 ![Default Wireframe](./Default.jpg)
+
+## Flight Tracker Module
+The Flight Tracker module is responsible for ingesting real-time surveillance data and using to predict and analyze flights. This information is used to optimize flight plans, predict future issues and report and resolve current incidents.
+
+### Module Functional Requirements Summary
+The Flight Tracker module implements the following requirements:
+* Real-Time Aircraft Data Ingestion: The Flight Tracker module shall use real-time surveillance data to track flights in the NGATC.
+* Real-Time Aircraft Position Update: The Flight Tracker module shall update the real-time position of all tracked aircraft and send this information to any relevant modules at a rate of at least once per second.
+* Unified Aircraft Track: The Flight Tracker module shall synthesize surveillance inputs for a single aircraft into a single, unified aircraft track.
+* Flight Plan Ingestion: The Flight Tracker module shall ingest flight plans through a well-defined API and accept or reject them.
+* Flight Plan Association: The Flight Tracker module shall associate aircraft flight plans with aircraft tracks.
+* Flight Plan Amendments: The Flight Tracker module shall support flight plan amendments from external sources (e.g. Controller module or pilots), or amendments generated within the module.
+* Pilot Flight Plan Amendment Acceptance: The Flight Tracker module shall validate all flight plan adjustments before they are accepted.
+* Aircraft Trajectory Prediction: The Flight Tracker module shall predict aircraft trajectories based on the aircraft's speed, altitude and route.
+* Flight Plan Deviation Notifications: The Flight Tracker module shall notify the Controller module of deviations between an aircraft's flight plan and its actual behavior beyond acceptable limits.
+* High Priority Ports: The Flight Tracker module shall use the high priority ports exposed by the Controller module for urgent communication.
+* Loss of Separation Detection: The Flight Tracker module shall detect any loss of separation conflicts between aircraft or between an aircraft and a static hazard.
+* Loss of Separation Alert to Aircraft: Upon detection of loss of separation, the Flight Tracker module shall communicate a resolution plan for use by the involved aircraft.
+* Restricted Airspace Alerts: The Flight Tracker module shall detect and communicate when a flight violates restricted airspace.
+* Real-Time Weather Ingestion: The Flight Tracker module shall ingest real-time weather and turbulence data.
+* Weather Impacts on Trajectories: The Flight Tracker module shall compensate for the impact of weather on trajectories.
+* AI Assisted Conflict Prediction: The Flight Tracker module shall provide AI assisted conflict prediction for at least 3-5 minutes into the future.
+* AI Assisted Conflict Alert: When a potential future conflict is identified by the AI assisted conflict prediction, an alert will be given to the controller.
+* AI Generated Route Optimization Suggestions: The Flight Tracker module shall provide AI generated route optimization suggestions that controllers can either accept or reject.
+* AI Detected Abnormal Aircraft Behavior: The Flight Tracker module shall provide alerts for AI detected abnormal aircraft behavior, such as altitude deviations.
+* Event Logging: The Flight Tracker module shall report all warnings to the System Monitor module for logging.
+
+### Module Non-Functional Requirements Summary
+* Surveillance Latency: The Flight Tracker module shall process surveillance updates with a latency of less than 500 ms.
+* Aircraft Volume: The Flight Tracker shall support at least 5000 simultaneous aircraft tracks.
+* 5 Nines of Availability: The Flight Tracker module shall be available 99.999% of the time.
+* Redundance Services: The Flight Tracker module shall provide for automatic switchover in the event of a failure.
+* Track Data Preservation: When the Flight Tracker module switches to another instance of a module due to a failure, this switchover shall preserve all track data.
+* Horizontal Scalability: The Flight Tracker module deployment shall scale horizontally to support increases in aircraft volume.
+* Communication Encryption: Communication between the Flight Tracker module and other modules shall use TLS encryption.
+* Role-Based Authentication: The Flight Tracker module shall require authentication before trusting any external data.
+* Flight Data Modification: The Flight Tracker module shall protect against the unauthorized modification of flight data.
+* New Data Sources: The Flight Tracker module shall support the "plug and play" addition of new data sources.
+* Module Testability: The Flight Tracker module shall be created such that it can be tested independently using mock data.
+* Automated Test Coverage: At least 80% automated test coverage of the Flight Tracker module core logic shall be achieved.
+
+### Flight Tracker Module Classes
+The classes that make up the Flight Tracker module are shown below and described in greater detail in the class dictionary.
+
+```plantuml
+@startuml
+title Flight Tracker Module Class Diagram
+scale max 800 width
+
+class Flight {
+    - long id
+    - String callSign
+    - java.time.Instant departureTime
+    - java.time.Instant eta
+    - String flightStatus
+    - int passengerCount
+    - double fuelAmountPounds
+    - double availableFlightTimeSeconds
+    - double remainingFlightTimeSeconds
+    - FlightPlan flightPlan
+    - FlightPlan proposedUpdateToFlightPlan
+    - FlightDynamics requestedFlightDynamics
+    - FlightDynamics actualFlightDynamics
+    - Aircraft aircraft
+    - ArrayList<FlightLogEntry> flightLogEntries
+    - Manifest manifest
+    - boolean isFlightAccepted
+    + acceptFlightPlanUpdate()
+    + acceptFlight()
+    + addFlightLogEntry(FlightLogEntry entry)
+}
+
+Flight "1" --> "1" FlightPlan
+
+Flight  "1" --> "2" FlightDynamics
+
+Flight  "1" --> "1" Aircraft
+
+Flight "1" *-- "*" FlightLogEntry
+
+Flight  "1" --> "1" Manifest
+
+class FlightPlan {
+    - long id
+    - java.time.Instant departureTime
+    - java.time.Instant eta
+    - ArrayList<Waypoint> waypoints
+}
+
+FlightPlan "1" *-- "*" Waypoint
+
+class FlightDynamics {
+    - double attitude
+    - double heading
+    - double speedKnots
+    - Location location
+    - Trajectory trajectory
+    - Waypoint targetWaypoint
+}
+
+FlightDynamics  "1" --> "1" Location
+FlightDynamics  "1" --> "1" Trajectory
+FlightDynamics "1" --> "1" Waypoint
+
+class Location {
+    - double latitude
+    - double longitude
+    - double altitudeFeet
+}
+
+class Benchmark {
+    - java.time.Instant time
+    - Location location
+}
+
+Benchmark "1" --> "1" Location
+
+class Trajectory {
+    - LinkedList<Benchmark> benchmarks
+}
+
+Trajectory "1" *-- "*" Benchmark
+
+class Aircraft {
+    - long id
+    - String callSign
+    - String readiness
+    - AircraftModel model
+    - FlightLog flightLog
+}
+
+Aircraft "1" --> "1" AircraftModel
+Aircraft "1" --> "1" FlightLog
+
+class AircraftModel {
+    - long id
+    - String manufacturer
+    - String type
+    - double ceilingFeet
+    - double stallSpeedKnots
+    - double cruisingSpeedKnots
+    - double maxSpeedKnots
+    - int passengerCapacity
+    - double fuelCapacityPounds
+    - double rangeMiles
+}
+
+class FlightLog {
+    - long id
+    - java.time.Instant startDate
+    - LinkedList<FlightLogEntry> flightLogEntries
+}
+
+FlightLog "1" *-- "*" FlightLogEntry
+
+class FlightLogEntry {
+    - long id
+    - String flightRecord
+}
+
+class Manifest {
+    - ArrayList<CrewMember> crewMembers
+    - ArrayList<Passenger> passengers
+}
+
+Manifest "1" *-- "*" CrewMember
+Manifest "1" *-- "*" Passenger
+
+class Passenger {
+    - long id
+    - String name
+    - java.time.Instant dateOfBirth
+}
+
+class CrewMember {
+    - long id
+    - String name
+    - java.time.Instant dateOfBirth
+    - String role
+}
+
+class Waypoint {
+    - long id
+    - String name
+    - Location location
+}
+
+Waypoint "1" <-- Location
+
+class Landmark {
+    - double elevationFeet
+}
+
+Waypoint <|-- Landmark
+
+class Airport {
+    - String code
+}
+
+Landmark <|-- Airport
+
+class FlightWarning {
+    - long id
+    - java.time.Instant time
+    - Severity severity
+    - ArrayList<Flight> flightsInDanger
+}
+
+class MidAirCollisionWarning {
+    - double timeBeforeCollisionSeconds
+    - double distanceToCollisionMiles
+    - String counterMeasureInstructions
+}
+
+FlightWarning <|-- MidAirCollisionWarning
+FlightWarning "1" o-- "*" Flight
+FlightWarning "1" --> "1" Severity
+
+
+class ObstructionWarning {
+    - double timeBeforeCollisionSeconds
+    - double distanceToCollisionMiles
+    - String counterMeasureInstructions
+}
+
+FlightWarning <|-- ObstructionWarning
+
+class DeviationWarning {
+    - String message
+}
+
+FlightWarning <|-- DeviationWarning
+
+class Area {
+    - long id
+    - String type
+    - double radiusMiles
+    - String name
+    - String description
+    - ArrayList<Location> boundaries
+}
+
+Area "1" *-- "*" Location
+
+class Terrain {
+    - double elevationFeet
+}
+
+Area <|-- Terrain
+
+class Building {
+    - double elevationFeet
+}
+
+Area <|-- Building
+
+class Airspace {
+    - double upperLimitFeet
+    - double lowerLimitFeet
+}
+
+Area <|-- Airspace
+
+class RestrictedAirspace {
+
+}
+
+Airspace <|-- RestrictedAirspace
+
+class SevereWeather {
+    - java.time.Instant expirationTime
+    - String warningDescription
+}
+
+Airspace <|-- SevereWeather
+
+enum Severity {
+    CRITICAL
+    WARNING
+    INFO
+}
+
+@enduml
+```
