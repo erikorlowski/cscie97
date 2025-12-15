@@ -1355,6 +1355,7 @@ class ApiController << (S,#FF7700) Singleton >> {
     + void removeArea(Area area)
     + void reportLogEvent(LogEvent event)
     + void receiveModuleStatuses(ArrayList<TrackedModule>)
+    + void reportStatus()
 }
 
 SectorManager <.. ApiController
@@ -1770,6 +1771,7 @@ The ApiController class is a singleton class used to send and receive messages t
 | removeArea | void removeArea(Area area) | Receives the removal of an area from the Static Map module. |
 | reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event to the System Monitor module. |
 | receiveModuleStatuses | void receiveModuleStatuses(ArrayList<TrackedModule>) | Receives the status of all NGATC modules. |
+| reportStatus | void reportStatus() | Report's the module's status to the System Monitor module every second. |
 
 ### Service API
 The Controller module implements the following API services:
@@ -2135,6 +2137,7 @@ class MidAirCollisionWarning {
     - double timeBeforeCollisionSeconds
     - double distanceToCollisionMiles
     - String counterMeasureInstructions
+    + void createCounterMeasureInstructions()
 }
 
 FlightWarning <|-- MidAirCollisionWarning
@@ -2146,6 +2149,7 @@ class ObstructionWarning {
     - double timeBeforeCollisionSeconds
     - double distanceToCollisionMiles
     - String counterMeasureInstructions
+    + void createCounterMeasureInstructions()
 }
 
 FlightWarning <|-- ObstructionWarning
@@ -2211,7 +2215,7 @@ class FlightManager << (S,#FF7700) Singleton >> {
     - ConcurrentHashMap<String, ConcurrentHashMap<long, Waypoint>> waypointMap
     + void addFlight(Flight flight)
     + void removeFlight(Flight flight)
-    + void updateFlight(Flight flight)
+    + void updateFlight(FlightDynamics flightDynamics)
     + void addArea(Area area)
     + void removeArea(Area area)
     + void updateArea(Area area)
@@ -2227,7 +2231,6 @@ class FlightManager << (S,#FF7700) Singleton >> {
     + List<Area> getCloseAreas(Flight flight)
     + List<Waypoint> getCloseWaypoints(Flight flight)
     + List<Flight> getAllFlights()
-    + Flight getClosestFlight(Location location)
 }
 
 FlightManager "1" *-- "*" Flight
@@ -2272,6 +2275,7 @@ class ApiController << (S,#FF7700) Singleton >> {
     + void updateArea(Area area)
     + void removeArea(Area area)
     + void reportLogEvent(LogEvent event)
+    + void reportStatus()
 }
 
 ApiController ..> Flight
@@ -2493,6 +2497,11 @@ A class used to describe types of warnings that could occur during a flight.
 ##### MidAirCollisionWarning
 A type of FlightWarning of an aircraft colliding with another aircraft in midair.
 
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| createCounterMeasureInstructions | void createCounterMeasureInstructions() | Creates instructions to resolve the potential mid-air collision. |
+
 ###### Properties
 | Property Name | Type | Description |
 |--|--|--|
@@ -2503,6 +2512,11 @@ A type of FlightWarning of an aircraft colliding with another aircraft in midair
 
 ##### ObstructionWarning
 A type of FlightWarning of an aircraft colliding with a static hazard.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| createCounterMeasureInstructions | void createCounterMeasureInstructions() | Creates instructions to resolve the potential collision. |
 
 ###### Properties
 | Property Name | Type | Description |
@@ -2559,27 +2573,76 @@ A type of Airspace experiencing hazardous weather conditions for flight.
 | expirationTime | java.time.Instant | The time the weather will expire. |
 | warningDescription | String | A description of the severe weather. |
 
+##### FlightManager
+The FlightManager is the main class responsible for predicting Flight trajectories and using these predictions to detect imminent collisions. This class performs its own analysis and is also used a a resource by the AI agents to perform their analysis.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| addFlight | void addFlight(Flight flight) | Adds a Flight to the FlightManager and classifies it in the flightMap. |
+| removeFlight | void removeFlight(Flight flight) | Removes a Flight from the flightMap. |
+| updateFlight | void updateFlight(FlightDynamics flightDynamics) | Updates the closest Flight with FlightDynamics from surveillance inputs. |
+| addArea | void addArea(Area area) | Adds a new Area to the areaMap. |
+| removeArea | void removeArea(Area area) | Removes an Area from the areaMap. |
+| updateArea | void updateArea(Area area) | Updates an Area. |
+| addWaypoint | void addWaypoint(Waypoint waypoint) | Adds a Waypoint to the waypointMap. |
+| removeWaypoint | void removeWaypoint(Waypoint waypoint) | Removes a Waypoint from the waypointMap. |
+| updateWaypoint | void updateWaypoint(Waypoint waypoint) | Updates a Waypoint. |
+| analyzeFlights | void analyzeFlights() | Analyzes all Flights to update predictions based on weather and surveillance data and to detect imminent collisions. |
+| analyzeFlight | FlightWarning analyzeFlight(Flight flight) | Analyzes an individual flight and returns a FlightWarning if an issue is detected or null if no issue is detected. |
+| analyzeFlightPlanProposal | FlightWarning analyzeFlightPlanProposal(Flight flight) | Analyzes a Flight with a proposed new FlightPlan to determine if this proposal will result in any conflicts. Returns a FlightWarning if an issue is detected or null if no issue is detected. |
+| getLocationHashKey | String getLocationHashKey(Location location) | Returns a hash key to use with the maps in this class. The key if XX_YY where XX is GPS longitude, and YY is GPS latitude, both truncated to an integer. |
+| getNeighborHashKeys | List<String> getNeighborHashKeys(Location location) | Gets the hash keys of the neighboring regions around a location. This is used for analyzing the area around a flight. |
+| getCloseFlights | List<Flight> getCloseFlights(Flight flight) | Gets all the flights within the current flight's region (as defined by the location hash key) and its neighbors. This is provided primarily as a resource to the AI agents. |
+| getCloseAreas | List<Area> getCloseAreas(Flight flight) | Gets all the Areas within the current flight's region (as defined by the location hash key) and its neighbors. This is provided primarily as a resource to the AI agents. |
+| getCloseWaypoints | List<Waypoint> getCloseWaypoints(Flight flight) | Gets all the Waypoints within the current flight's region (as defined by the location hash key) and its neighbors. This is provided primarily as a resource to the AI agents. |
+| getAllFlights | List<Flight> getAllFlights() | Returns a list of all tracked Flights. This is provided primarily as a resources to the AI agents. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| flightMap | ConcurrentHashMap<String, ConcurrentHashMap<long, Flight>> | A hashmap grouping Flights by their GPS coordinates. This allows for O(1) access to a list of all nearby Flights. |
+| areaMap | ConcurrentHashMap<String, ConcurrentHashMap<long, Area>> | A hashmap grouping Areas by their GPS coordinates. This allows for O(1) access to a list of all nearby Areas. |
+| waypointMap | ConcurrentHashMap<String, ConcurrentHashMap<long, Waypoint>> | A hashmap grouping Waypoints by their GPS coordinates. This allows for O(1) access to a list of all nearby Waypoints. |
+
+##### AiAgent (abstract class)
+The AiAgent abstract class is used to model an AI automation agent and provide functionality shared by all agents. Specific agents are implemented to achieve well defined purposes.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| start | void start() | Starts the AI agent and continues its execution in a thread. |
+| stop | void stop() | Stops the execution of the AI agent thread. |
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| prompt | String | The prompt given to the AI agent describing the details of its persona. |
+
+##### AiConflictDetectionAgent
+The AiConflictDetectionAgent is a specific type of agent. The goal of this agent is to predict conflicts (mid-air collisions and obstruction collisions) on a 3-5 minute time horizon. The agent is empowered to create a FlightWarning and propose a new FlightPlan, but cannot directly change any flight data.
+
+##### AiRouteOptimizationAgent
+The AiRouteOptimizationAgent is a specific type of agent. The goal of this agent is to optimize routes by avoiding bad weather, finding more direct paths, or other means. The agent is empowered to propose new FlightPlans, but cannot directly change any flight data.
+
+##### AiAbnormalBehaviorDetectionAgent
+The AiAbnormalBehaviorDetectionAgent is a specific type of agent. The goal of this agent is to detect any flights which have deviated in a meaningful from the FlightPlan. The agent is empowered to create a FlightWarning, but cannot directly change any flight data.
+
 ##### ApiController
 The ApiController class is a singleton class used to send and receive messages through the module's REST API.
 
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| receiveNewFlightProposal | void receiveNewFlightProposal(Flight newFlight) | Receives a proposed flight and adds the flight in the SectorManager. |
-| forwardNewFlightProposal | void forwardNewFlightProposal(Flight newFlight) | Sends a new flight proposal to the Flight Tracker module for final acceptance. |
-| receiveFlightTrackerNewFlightDecision | void receiveFlightTrackerNewFlightDecision(Flight newFlight, boolean isAccepted) | Receives an accept/reject decision from the Flight Tracker module and uses that decision to send a decision to the pilot using sendFlightDecision and update the status of the flight in the Controller module. |
-| sendFlightDecision | void sendFlightDecision(Flight newFlight, boolean isAccepted) | Sends the acceptance or rejection of a new flight to the pilots. |
-| receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight, boolean isMandatory) | Receives a flight plan update from the FlightTracker module or pilot and updates the Flight with the proposed plan in the Controller module, for a controller to accept or reject. If the update is marked as mandatory (e.g. emergency conflict resolution), the update is accepted automatically. |
-| sendFlightPlanUpdate | void sendFlightPlanUpdate(Flight flight, boolean isUrgent) | Sends an updated flight plan to the pilots and Flight Tracker module. |
-| respondToFlightPlanUpdate | void respondToFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isAccepted) | Responds to the Flight Tracker module with weather a FlightPlan update was accepted. |
-| receiveFlightWarning | void receiveFlightWarning(FlightWarning warning) | Receives a warning from the Flight Tracker module. |
-| sendMessageToPilot | void sendMessageToPilot(Flight flight, String message) | Sends a message to a pilot. |
-| receiveMessageFromPilot | void receiveMessageFromPilot(Flight flight, String message) | Receives a message from a pilot and adds the message to the appropriate sector. |
-| sendMessageToSector | void sendMessageToSector(ControlSector sector, String message) | Sends a message to another sector encoded with the source sector. |
-| receiveFlights | void receiveFlights() | Receives all the currently active flights from the Flight Tracker module, updates their FlightDynamics and ensures they are in the correct sector. |
-| updateWaypoint | void updateWaypoint(Waypoint waypoint) | Receives an updated waypoint from the Static Map module. |
-| removeWaypoint | void removeWaypoint(Waypoint waypoint) | Receives the removal of a waypoint from the Static Map module. |
-| updateArea | void updateArea(Area area) | Receives an updated area from the Static Map module. |
-| removeArea | void removeArea(Area area) | Receives the removal of an area from the Static Map module. |
-| reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event to the System Monitor module. |
-| receiveModuleStatuses | void receiveModuleStatuses(ArrayList<TrackedModule>) | Receives the status of all NGATC modules. |
+| receiveNewFlightProposal | void receiveNewFlightProposal(Flight newFlight) | Receives a proposal for a new flight that the Flight Tracker module will analyze and accept or reject. |
+| sendFlightDecision | void sendFlightDecision(Flight newFlight, boolean isAccepted) | Sends the accept/reject decision for a new flight to the Controller module. |
+| receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight) | Receives an updated flight plan. |
+| sendFlightPlanUpdate | void sendFlightPlanUpdate(Flight flight, boolean isMandatory) | Sends an update to a flight plan to the Controller module. |
+| sendFlightWarning | void sendFlightWarning(FlightWarning warning) | Sends a warning to the Controller module. |
+| receiveSurveillanceInput | void receiveSurveillanceInput(FlightDynamics dynamics) | Receives surveillance input and applies the input to the appropriate flight. |
+| updateWaypoint | void updateWaypoint(Waypoint waypoint) | Updates a Waypoint with information from the Static Map module. |
+| removeWaypoint | void removeWaypoint(Waypoint waypoint) | Removes a Waypoint. |
+| updateArea | void updateArea(Area area) | Updates an Area with information from the Static Map module. |
+| removeArea | void removeArea(Area area) | Removes an Area |
+| reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event, such as a FlightWarning or failure to the System Monitor module. |
+| reportStatus | void reportStatus() | Report's the module's status to the System Monitor module every second. |
