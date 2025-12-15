@@ -2731,3 +2731,51 @@ end
 
 This diagram depicts how an AI agent is used for this type of route optimization, with the proposal being accepted or rejected by a human operator.
 
+### Entitlement Service Integration
+This module interacts through a REST API with other modules and with data sources external to the NGATC system. For other modules, an internal module role is used to control access. For data sources such as surveillance inputs, the trusted data source role is used, to give this data source the minimum permission needed to send its data.
+
+### Object Persistence
+Object persistence for the Flight Tracker module is achieved through the use of the Hibernate framework, with database primary keys noted in the class dictionary.
+
+### AI Automation Strategy
+There are three agents that are used in the Flight Tracker module, each with their own responsibilities. These agents are described in greater detail below. In all cases, AI agents do not have the ability to directly modify flight data without human acceptance.
+
+#### Conflict Detection Agent
+The Conflict Detection Agent is used to detect collisions between flights or a flight and a static hazard. The agent has read access to flight, area and waypoint information in the Flight Tracker module. The agent also has the ability to create a FlightWarning and propose a FlightPlan.
+
+#### Route Optimization Agent
+The Route Optimization Agent is used to optimize flight plans. The primary goal is to avoid hazardous weather, the second goal is to reduce fuel consumption and the final goal is to reduce flight time. The agent has read access to flight, area and waypoint information in the Flight Tracker module. The agent also has the ability to propose a FlightPlan.
+
+#### Flight Deviation Agent
+The Flight Deviation Agent is used to detect notable deviations of flights from their expected dynamics. The agent has read access to flight, area and waypoint information in the Flight Tracker module. The agent also has the ability to create a FlightWarning.
+
+### Testing Strategy
+The module level testing for the Flight Tracker module is as follows:
+
+* Conflict detection test:
+    * Simulated flights are created
+    * Simulated surveillance inputs are created to show an imminent mid-air collision
+    * It is verified that the module properly responds to the imminent collision
+    * Simulated surveillance inputs are created to show a flight about to collide with an obstacle
+    * It is verified that the module properly responds to the imminent collision
+* AI Automation Test:
+    * Simulated flights are created
+    * Simulated inputs are sent to show a flight moving into a thunderstorm
+    * It is verified that a flight plan is proposed to avoid the thunderstorm
+    * Simulated flights are created that will collide in approximately 5 minutes
+    * It is verified that a flight plan is proposed to avoid this future collision
+    * Simulated inputs are sent to show a flight deviating from its flight plan
+    * Is is verified that a warning is sent to reflect this deviation
+
+### Risks
+The Flight Tracker module is a safety critical module that is required to work with a very high degree of reliability. Using the terminology of functional safety, the "Safety Function" of this module is to detect an imminent collision of an aircraft and report it, along with suitable resolution guidance within 1 second of detection. A few of the failures that could cause this safety function to fail are:
+
+* **Random Fault**: A physical issue (e.g. loss of power) causes an instance of this service to go offline. *Mitigation:* Redundant instances of the services are commissioned, which can automatically take over when a failure occurs.
+* **Random Fault**: A surveillance input is either not received or corrupted. *Mitigation*: Redundant and diverse surveillance inputs are used.
+* **Systematic Fault**: A software defect in the Flight Tracker module causes a collision not to be detected. *Mitigation*: Software testing and static analysis are performed to lessen the risk of a critical software defect.
+* **Systematic Fault**: A defect in the database or database integration framework causes a collision not to be detected. *Mitigation*: These tools are treated as "online tools" in IEC 61508-3 and would therefore need to be proven reliable. After investigation, and likely collaboration with the software vendors, a "proven in use" argument could likely be made for this software. Additionally, the specific versions of these tools would need to be managed and controlled.
+* **Systematic Fault**: A defect in the integration between NGATC modules causes a collision not to be detected or properly communicated. *Mitigation*: System level testing lessens the risk of this class of failure. Additionally, versions of these modules are managed and qualified together before any updates are made.
+* **Systematic Fault**: A fault in the operating system used to run the Flight Tracker module causes a collision not to be detected. *Mitigation*: The Flight Tracker module is deployed in Kubernetes on diverse operating systems.
+* **Systematic Fault**: The Java Garbage Collector causes a delay in program execution, which results in a collision not being detected within the safety reaction time. *Mitigation:* This is less of a concern on this system where the safety reaction time is measure in seconds compared to traditional safety systems where the safety reaction time is measured in milliseconds.
+
+Between these mitigations and due diligence in the software development process, this module will be developed to a very high degree of reliability.
