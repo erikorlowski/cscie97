@@ -1038,9 +1038,11 @@ class Flight {
     - ArrayList<FlightLogEntry> flightLogEntries
     - Manifest manifest
     - boolean isFlightAccepted
-    + acceptFlightPlanUpdate()
-    + acceptFlight()
-    + addFlightLogEntry(FlightLogEntry entry)
+    + void acceptFlightPlanUpdate()
+    + void acceptFlight()
+    + void addFlightLogEntry(FlightLogEntry entry)
+    + void proposeNewFlightPlan(FlightPlan proposedFlightPlan)
+    + void updateFlight(FlightDynamics newDynamics)
 }
 
 Flight "1" --> "1" FlightPlan
@@ -1388,6 +1390,8 @@ The Flight class is the top level class that encapsulates all information relati
 | acceptFlightPlanUpdate | void acceptFlightPlanUpdate() | Accepts a proposed edit to the Flight's FlightPlan and replaces the flightPlan with the proposedUpdateToFlightPlan and communicates the updated plan to the pilot. |
 | acceptFlight | void acceptFlight() | Signals that a new flight has been accepted into the NGATC and communicates the acceptance to the pilot. |
 | addFlightLogEntry | void addFlightLogEntry(FlightLogEntry entry) | Adds an entry in the flight's log. |
+| proposeNewFlightPlan | void proposeNewFlightPlan(FlightPlan proposedFlightPlan) | Adds a new flight plan proposal to the flight. |
+| updateFlight | void updateFlight(FlightDynamics newDynamics) | Updates a Flight with updated FlightDynamics. |
 
 ###### Properties
 | Property Name | Type | Description |
@@ -1759,7 +1763,7 @@ The ApiController class is a singleton class used to send and receive messages t
 | sendMessageToPilot | void sendMessageToPilot(Flight flight, String message) | Sends a message to a pilot. |
 | receiveMessageFromPilot | void receiveMessageFromPilot(Flight flight, String message) | Receives a message from a pilot and adds the message to the appropriate sector. |
 | sendMessageToSector | void sendMessageToSector(ControlSector sector, String message) | Sends a message to another sector encoded with the source sector. |
-| receiveFlights | void receiveFlights() | Receives all the currently active flights from the Flight Tracker module. |
+| receiveFlights | void receiveFlights() | Receives all the currently active flights from the Flight Tracker module, updates their FlightDynamics and ensures they are in the correct sector. |
 | updateWaypoint | void updateWaypoint(Waypoint waypoint) | Receives an updated waypoint from the Static Map module. |
 | removeWaypoint | void removeWaypoint(Waypoint waypoint) | Receives the removal of a waypoint from the Static Map module. |
 | updateArea | void updateArea(Area area) | Receives an updated area from the Static Map module. |
@@ -1984,9 +1988,11 @@ class Flight {
     - ArrayList<FlightLogEntry> flightLogEntries
     - Manifest manifest
     - boolean isFlightAccepted
-    + acceptFlightPlanUpdate()
-    + acceptFlight()
-    + addFlightLogEntry(FlightLogEntry entry)
+    + void acceptFlightPlanUpdate()
+    + void acceptFlight()
+    + void addFlightLogEntry(FlightLogEntry entry)
+    + void proposeNewFlightPlan(FlightPlan proposedFlightPlan)
+    + void updateFlight(FlightDynamics newDynamics)
 }
 
 Flight "1" --> "1" FlightPlan
@@ -2199,5 +2205,95 @@ enum Severity {
     INFO
 }
 
+class FlightManager << (S,#FF7700) Singleton >> {
+    - ConcurrentHashMap<String, ConcurrentHashMap<long, Flight>> flightMap
+    - ConcurrentHashMap<String, ConcurrentHashMap<long, Area>> areaMap
+    - ConcurrentHashMap<String, ConcurrentHashMap<long, Waypoint>> waypointMap
+    + void addFlight(Flight flight)
+    + void removeFlight(Flight flight)
+    + void updateFlight(Flight flight)
+    + void addArea(Area area)
+    + void removeArea(Area area)
+    + void updateArea(Area area)
+    + void addWaypoint(Waypoint waypoint)
+    + void removeWaypoint(Waypoint waypoint)
+    + void updateWaypoint(Waypoint waypoint)
+    + void analyzeFlights()
+    + FlightWarning analyzeFlight(Flight flight)
+    + FlightWarning analyzeFlightPlanProposal(Flight flight)
+    + String getLocationHashKey(Location location)
+    + List<String> getNeighborHashKeys(Location location)
+    + List<Flight> getCloseFlights(Flight flight)
+    + List<Area> getCloseAreas(Flight flight)
+    + List<Waypoint> getCloseWaypoints(Flight flight)
+    + List<Flight> getAllFlights()
+    + Flight getClosestFlight(Location location)
+}
+
+FlightManager "1" *-- "*" Flight
+FlightManager "1" *-- "*" Area
+FlightManager "1" *-- "*" Waypoint
+
+abstract class AiAgent {
+    - String prompt
+    + void start()
+    + void stop()
+}
+
+AiAgent ..> FlightManager
+
+class AiConflictDetectionAgent {
+
+}
+
+AiAgent <|.. AiConflictDetectionAgent
+
+class AiRouteOptimizationAgent {
+
+}
+
+AiAgent <|.. AiRouteOptimizationAgent
+
+class AiAbnormalBehaviorDetectionAgent {
+
+}
+
+AiAgent <|.. AiAbnormalBehaviorDetectionAgent
+
+class ApiController << (S,#FF7700) Singleton >> {
+    + void receiveNewFlightProposal(Flight newFlight)
+    + void sendFlightDecision(Flight newFlight, boolean isAccepted)
+    + void receiveFlightPlanUpdate(Flight flight)
+    + void sendFlightPlanUpdate(Flight flight, boolean isMandatory)
+    + void sendFlightWarning(FlightWarning warning)
+    + void receiveSurveillanceInput(FlightDynamics dynamics)
+    + void updateWaypoint(Waypoint waypoint)
+    + void removeWaypoint(Waypoint waypoint)
+    + void updateArea(Area area)
+    + void removeArea(Area area)
+    + void reportLogEvent(LogEvent event)
+}
+
+ApiController ..> Flight
+ApiController ..> FlightPlan
+ApiController ..> FlightWarning
+ApiController ..> Waypoint
+ApiController ..> Area
+ApiController ..> LogEvent
+
+class LogEvent {
+    - Severity severity
+    - String source
+    - String info
+    - int id
+    - java.time.Instant timestamp
+    + LogEvent(Severity severity, String source, String info, Instance timestamp)
+}
+
+LogEvent --> Severity
+
+
 @enduml
 ```
+
+#### Class Dictionary
