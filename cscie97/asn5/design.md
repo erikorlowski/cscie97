@@ -1357,6 +1357,7 @@ class ApiController << (S,#FF7700) Singleton >> {
     + void reportLogEvent(LogEvent event)
     + void receiveModuleStatuses(ArrayList<TrackedModule>)
     + void reportStatus()
+    + void requestWeatherReport()
 }
 
 SectorManager <.. ApiController
@@ -1774,6 +1775,7 @@ The ApiController class is a singleton class used to send and receive messages t
 | reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event to the System Monitor module. |
 | receiveModuleStatuses | void receiveModuleStatuses(ArrayList<TrackedModule>) | Receives the status of all NGATC modules. |
 | reportStatus | void reportStatus() | Report's the module's status to the System Monitor module every second. |
+| requestWeatherReport | void requestWeatherReport() | Runs in a thread once per second to request a weather report from the Weather module. The information is then incorporated into the SectorManager. |
 
 ### Service API
 The Controller module implements the following API services:
@@ -2206,6 +2208,16 @@ class SevereWeather {
 
 Airspace <|-- SevereWeather
 
+class WeatherReport {
+    - double temperatureCelsius
+    - double windSpeedKnots
+    - double windHeading
+    - Location location
+}
+
+Area <|-- WeatherReport
+WeatherReport "1" --> "1" Location
+
 enum Severity {
     CRITICAL
     WARNING
@@ -2281,6 +2293,7 @@ class ApiController << (S,#FF7700) Singleton >> {
     + void removeArea(Area area)
     + void reportLogEvent(LogEvent event)
     + void reportStatus()
+    + requestWeatherReport()
 }
 
 ApiController ..> Flight
@@ -2579,6 +2592,22 @@ A type of Airspace experiencing hazardous weather conditions for flight.
 | expirationTime | java.time.Instant | The time the weather will expire. |
 | warningDescription | String | A description of the severe weather. |
 
+##### WeatherReport
+A type of Area used to report the weather conditions for a Location (with resolution of 1 GPS degree).
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| temperatureCelsius | double | The temperature in Celsius. |
+| windSpeedKnots | double | The wind speed in knots. |
+| windHeading | double | The wind heading in degrees. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| location | Location | The location for this WeatherReport, which is valid for one GPS degree of latitude and longitude. |
+
+
 ##### FlightManager
 The FlightManager is the main class responsible for predicting Flight trajectories and using these predictions to detect imminent collisions. This class performs its own analysis and is also used a a resource by the AI agents to perform their analysis.
 
@@ -2654,6 +2683,7 @@ The ApiController class is a singleton class used to send and receive messages t
 | removeArea | void removeArea(Area area) | Removes an Area |
 | reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event, such as a FlightWarning or failure to the System Monitor module. |
 | reportStatus | void reportStatus() | Report's the module's status to the System Monitor module every second. |
+| requestWeatherReport | void requestWeatherReport() | Runs in a thread once per second to request a weather report from the Weather module. The information is then incorporated into the FlightManager. |
 
 ### Service API
 The Flight Tracker module implements the follow REST API interface:
@@ -2779,3 +2809,116 @@ The Flight Tracker module is a safety critical module that is required to work w
 * **Systematic Fault**: The Java Garbage Collector causes a delay in program execution, which results in a collision not being detected within the safety reaction time. *Mitigation:* This is less of a concern on this system where the safety reaction time is measure in seconds compared to traditional safety systems where the safety reaction time is measured in milliseconds.
 
 Between these mitigations and due diligence in the software development process, this module will be developed to a very high degree of reliability.
+
+## Weather Module
+The Weather module is responsible for ingesting weather data and sending weather reports to other modules as requested.
+
+### Module Functional Requirements Summary
+The following system level functional requirements are implemented by the Weather module:
+* Real-Time Weather Ingestion: The Weather module shall ingest real-time weather data from external sources.
+* Weather Impacts on Trajectories: The Weather module shall report on weather conditions as requested by other modules.
+
+### Module Non-Functional Requirements Summary
+* Redundance Services: The Weather module shall be deployed with redundant instances, such that in the event of a failure, another instance will automatically take over.
+* Horizontal Scalability: The Weather module shall be implemented such that additional instances can be provisioned to handle additional loading.
+* New Data Sources: The Weather module shall expose a REST API to enable easy integration of additional data sources.
+* Module Testability: The Weather module shall be implemented in a way that enables independent testing of the module using simulated data.
+
+### Weather Module Classes
+The classes that make up the Weather module are shown in the class diagram below and described in more detail in the class dictionary.
+
+```plantuml
+@startuml
+title Weather Module Class Diagram
+scale max 800 width
+
+class Location {
+    - double latitude
+    - double longitude
+    - double altitudeFeet
+}
+
+class Area {
+    - long id
+    - String type
+    - double radiusMiles
+    - String name
+    - String description
+    - ArrayList<Location> boundaries
+}
+
+Area "1" *-- "*" Location
+
+class Airspace {
+    - double upperLimitFeet
+    - double lowerLimitFeet
+}
+
+Area <|-- Airspace
+
+class SevereWeather {
+    - java.time.Instant expirationTime
+    - String warningDescription
+}
+
+Airspace <|-- SevereWeather
+
+class WeatherReport {
+    - double temperatureCelsius
+    - double windSpeedKnots
+    - double windHeading
+    - Location location
+}
+
+Area <|-- WeatherReport
+WeatherReport "1" --> "1" Location
+
+class WeatherManager << (S,#FF7700) Singleton >> {
+    - ConcurrentHashMap<String, WeatherReport> weatherMap
+    - ConcurrentHashMap<long, WeatherReport> severeWeatherMap
+    + void main(String[] args)
+    + ingestWeatherReport(WeatherReport report)
+    + ingestSevereWeather(SevereWeather weather)
+    + pruneSevereWeather()
+}
+
+WeatherManager "1" *-- "*" WeatherReport
+WeatherManager "1" *-- "*" SevereWeather
+
+enum Severity {
+    CRITICAL
+    WARNING
+    INFO
+}
+
+class LogEvent {
+    - Severity severity
+    - String source
+    - String info
+    - int id
+    - java.time.Instant timestamp
+    + LogEvent(Severity severity, String source, String info, Instance timestamp)
+}
+
+LogEvent --> Severity
+
+class TrackedModule {
+    - String id
+    - Status moduleStatus
+}
+
+class ApiController << (S,#FF7700) Singleton >> {
+    + void giveWeatherReport()
+    + void sendModuleStatus()
+    + void receiveWeatherReport(WeatherReport report)
+    + void logEvent(LogEvent event)
+}
+
+ApiController ..> WeatherReport
+ApiController ..> LogEvent
+ApiController ..> TrackedModule
+
+@enduml
+```
+
+#### Class Dictionary
