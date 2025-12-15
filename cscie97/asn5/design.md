@@ -3080,3 +3080,231 @@ The module testing strategy for the Weather module is as follows:
 
 ### Risks
 The two risks for the Weather module are that a weather report is incorrect, or that a malicious actor could do damage to the NGATC system through this module. The first risk is mitigated by allowing for diverse weather data sources by providing a simple and well defined API. The second risk is mitigated by using the Entitlement Service to control access to the module's API.
+
+## Static Map Module
+The Static Map module is responsible for reporting to other modules the locations of static objects such as airports, terrain, restricted airspace and buildings.
+
+### Module Functional Requirement Summary
+The Static Map module implements the following system level functional requirements:
+
+* 
+
+### Static Map Module Classes
+The classes that make up the Static Map module are shown below with greater detail given in the class dictionary.
+
+```plantuml
+@startuml
+title Static Map Module Class Diagram
+scale max 800 width
+
+class Location {
+    - double latitude
+    - double longitude
+    - double altitudeFeet
+}
+
+class Waypoint {
+    - long id
+    - String name
+    - Location location
+}
+
+Waypoint "1" <-- Location
+
+class Landmark {
+    - double elevationFeet
+}
+
+Waypoint <|-- Landmark
+
+class Airport {
+    - String code
+}
+
+Landmark <|-- Airport
+
+
+
+class Area {
+    - long id
+    - String type
+    - double radiusMiles
+    - String name
+    - String description
+    - ArrayList<Location> boundaries
+}
+
+Area "1" *-- "*" Location
+
+class Terrain {
+    - double elevationFeet
+}
+
+Area <|-- Terrain
+
+class Building {
+    - double elevationFeet
+}
+
+Area <|-- Building
+
+class Airspace {
+    - double upperLimitFeet
+    - double lowerLimitFeet
+}
+
+Area <|-- Airspace
+
+class RestrictedAirspace {
+
+}
+
+Airspace <|-- RestrictedAirspace
+
+interface Visitable {
+    + accept(Visitor visitor)
+}
+
+Visitable <|.. Area
+Visitable <|.. Waypoint
+
+interface Visitor {
+    + void visit(Area area)
+    + void visit(Airspace airspace)
+    + void visit(RestrictedAirspace restrictedAirspace)
+    + void visit(Terrain terrain)
+    + void visit(Building building)
+    + void visit(Waypoint waypoint)
+    + void visit(Landmark landmark)
+    + void visit(Airport airport)
+}
+
+Visitor ..> Area
+Visitor ..> Airspace
+Visitor ..> RestrictedAirspace
+Visitor ..> Terrain
+Visitor ..> Building
+Visitor ..> Waypoint
+Visitor ..> Landmark
+Visitor ..> Airport
+
+class BuildSpreadsheetVisitor {
+
+}
+
+Visitor <|.. BuildSpreadsheetVisitor
+
+class MapReportVisitor {
+
+}
+
+Visitor <|.. MapReportVisitor
+
+class StaticMapUi {
+    - spreadsheetStrategy
+    + void renderLoginPage()
+    + void renderSpreadsheetPage()
+    + void renderSpreadsheetTabs()
+    + void switchSpreadsheetTab(Spreadsheet newSpreadsheet)
+}
+
+StaticMapUi "1" --> "1" Spreadsheet
+
+abstract class Spreadsheet {
+    - ConcurrentHashMap<int, ArrayList<String>> grid
+    + void renderSpreadsheet()
+    + void postSpreadsheetEdit()
+    + int findElement(String name)
+}
+
+class AreaSpreadsheet {
+
+}
+
+Spreadsheet <|.. AreaSpreadsheet
+
+class AirspaceSpreadsheet {
+
+}
+
+Spreadsheet <|... AirspaceSpreadsheet
+
+class RestrictedAirspaceSpreadsheet {
+
+}
+
+Spreadsheet <|.. RestrictedAirspaceSpreadsheet
+
+class TerrainSpreadsheet {
+
+}
+
+Spreadsheet <|... TerrainSpreadsheet
+
+class BuildingSpreadsheet {
+
+}
+
+Spreadsheet <|.. BuildingSpreadsheet
+
+class WaypointSpreadsheet {
+
+}
+
+Spreadsheet <|... WaypointSpreadsheet
+
+class LandmarkSpreadsheet {
+
+}
+
+Spreadsheet <|... LandmarkSpreadsheet
+
+class AirportSpreadsheet {
+
+}
+
+Spreadsheet <|.. AirportSpreadsheet
+
+class MapManager << (S,#FF7700) Singleton >> {
+    - ConcurrentHashMap<long, Waypoint> waypointMap
+    - ConcurrentHashMap<long, Area> areaMap
+    - ConcurrentHashMap<long, Airspace> airspaceMap
+    - ConcurrentHashMap<long, Landmark> landmarkMap
+    - ConcurrentHashMap<long, Building> buildingMap
+    - ConcurrentHashMap<long, Terrain> terrainMap
+    - ConcurrentHashMap<long, RestrictedAirspace> restrictedAirspaceMap
+    - ConcurrentHashMap<long, Airport> airportMap
+    + void main(String[] args)
+}
+
+Visitor ..> MapManager
+Spreadsheet ..> MapManager
+
+enum Severity {
+    CRITICAL
+    WARNING
+    INFO
+}
+
+class ApiController << (S,#FF7700) Singleton >> {
+    + void reportMap()
+    + void reportLogEvent(LogEvent event)
+    + void reportStatus()
+}
+
+ApiController ..> MapManager
+ApiController ..> LogEvent
+
+class LogEvent {
+    - Severity severity
+    - String source
+    - String info
+    - int id
+    - java.time.Instant timestamp
+    + LogEvent(Severity severity, String source, String info, Instance timestamp)
+}
+
+LogEvent --> Severity
+
+@enduml
+```
