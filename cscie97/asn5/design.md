@@ -1250,6 +1250,15 @@ class SevereWeather {
 
 Airspace <|-- SevereWeather
 
+class WeatherReport {
+    - double temperatureCelsius
+    - double windSpeedKnots
+    - double windHeading
+    - Location location
+}
+
+Area <|-- WeatherReport
+
 class ControlSector {
     - ArrayList<String> controllerMessages
     - int numberOfCurrentFlights
@@ -2880,6 +2889,7 @@ class WeatherManager << (S,#FF7700) Singleton >> {
     + ingestWeatherReport(WeatherReport report)
     + ingestSevereWeather(SevereWeather weather)
     + pruneSevereWeather()
+    + List<Area> createWeatherReport()
 }
 
 WeatherManager "1" *-- "*" WeatherReport
@@ -2911,6 +2921,7 @@ class ApiController << (S,#FF7700) Singleton >> {
     + void giveWeatherReport()
     + void sendModuleStatus()
     + void receiveWeatherReport(WeatherReport report)
+    + void receiveSevereWeather(SeverWeather weather)
     + void logEvent(LogEvent event)
 }
 
@@ -2922,3 +2933,150 @@ ApiController ..> TrackedModule
 ```
 
 #### Class Dictionary
+##### Location
+A GPS coordinate with an altitude.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| latitude | double | The GPS latitude with north as positive. |
+| longitude | double | The GPS longitude with east as positive. |
+| altitudeFeet | double | The altitude in feet above sea level. |
+
+##### Area
+Represents an area in the NGATC system.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A globally unique ID, used as the primary key in the database. |
+| type | String | A String indicating the type of area. |
+| radiusMiles | double | The radius of the area in miles. |
+| name | String | The name of the area. |
+| description | String | A description of the area. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| boundaries | ArrayList<Location> | An ordered list of the boundaries of the area. |
+
+##### Airspace
+A type of area describing a volume of airspace.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| upperLimitFeet | double | The upper limit of airspace altitude. |
+| lowerLimitFeet | double | The lower limit of the airspace altitude. |
+
+##### SevereWeather
+A type of Airspace experiencing hazardous weather conditions for flight.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| expirationTime | java.time.Instant | The time the weather will expire. |
+| warningDescription | String | A description of the severe weather. |
+
+##### WeatherReport
+A type of Area used to report the weather conditions for a Location (with resolution of 1 GPS degree).
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| temperatureCelsius | double | The temperature in Celsius. |
+| windSpeedKnots | double | The wind speed in knots. |
+| windHeading | double | The wind heading in degrees. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| location | Location | The location for this WeatherReport, which is valid for one GPS degree of latitude and longitude. |
+
+##### WeatherManager
+The WeatherManager class is responsible for managing incoming weather data to be used to create reports as requested.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| main | void main(String[] args) | The main method for the module. Starts a thread to report the system status and prune severe weather every second. |
+| ingestWeatherReport | void ingestWeatherReport(WeatherReport report) | Incorporates an incoming weather report into the weatherMap. |
+| ingestSevereWeather | void ingestSevereWeather(SevereWeather weather) | Incorporates an incoming severe weather event into the severeWeatherMap. |
+| pruneSevereWeather | void pruneSevereWeather() | Iterates through the active SevereWeather events and removes any that are expired. |
+| createWeatherReport | List<Area> createWeatherReport() | Creates a weather report to be sent, including WeatherReports and SevereWeather. |
+
+##### ApiController
+The ApiController class is a singleton class used to send and receive messages through the module's REST API.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| giveWeatherReport | void giveWeatherReport() | Reports the weather to another module using a list of JSON encoded WeatherReport and SevereWeather objects. |
+| sendModuleStatus | void sendModuleStatus() | Reports the status of the module to the System Monitor module. |
+| receiveWeatherReport | void receiveWeatherReport(WeatherReport report) | Receives a weather report from an external source and incorporates it into the WeatherManager. |
+| receiveSevereWeather | void receiveSevereWeather(SeverWeather weather) | Receives a severe weather report and incorporates it into the WeatherManager. |
+| logEvent | void logEvent(LogEvent event) | Logs a notable event with the System Monitor module. |
+
+### Service API
+The Flight Tracker module implements the follow REST API interface:
+
+* Give Weather Report: Receives a request for a weather report.
+    * Inputs:
+        * Access Token: Requires an internal module role
+    * Output: A JSON encoded list of WeatherReport and SevereWeather objects.
+* Receive Weather Report: Receives a weather report from an external source.
+    * Inputs:
+        * Report: A JSON encoded WeatherReport object.
+        * Access Token: Requires a Trusted Data Source role
+    * Output: An HTTP status.
+* Receive Severe Weather: Receives a severe weather report from an external source.
+    * Inputs:
+        * Report: A JSON encoded SevereWeather object.
+        * Access Token: Requires a Trusted Data Source role
+    * Output: An HTTP status.
+
+### Sequence Diagram
+The following sequence diagram illustrates the process of receiving a weather report and sending a report to an external module.
+
+```plantuml
+@startuml
+title Weather Reporting Sequence Diagram
+scale max 800 width
+
+actor "External Data Source" as src
+actor "Flight Tracker Module" as ft
+participant "ApiController" as api
+participant "WeatherManager" as wm
+
+src -> api : Sends weather report
+api -> api : receiveWeatherReport(report)
+api -> wm : ingestWeatherReport(report)
+ft -> api : Request weather report
+activate api
+api -> api : giveWeatherReport()
+api -> wm : createWeatherReport()
+wm --> api
+api --> ft
+deactivate api
+
+@enduml
+```
+
+### Entitlement Service Integration
+The entitlement service is used to ensure that access for all API calls are protected. For receiving data from external sources, the trusted data source role is used. For other calls, the internal module role is used.
+
+### Object Persistence
+Object persistence is handled through the Hibernate framework with primary keys for the database noted in the class dictionary.
+
+### Testing Strategy
+The module testing strategy for the Weather module is as follows:
+
+* Weather Report Test:
+    * Ingest WeatherReports
+    * Ingest SevereWeather events
+    * Let some, but not all of the SevereWeather events expire
+    * Receive some WeatherReports to override existing ones
+    * Receive a request for a weather report and verify it is correct.
+
+### Risks
+The two risks for the Weather module are that a weather report is incorrect, or that a malicious actor could do damage to the NGATC system through this module. The first risk is mitigated by allowing for diverse weather data sources by providing a simple and well defined API. The second risk is mitigated by using the Entitlement Service to control access to the module's API.
