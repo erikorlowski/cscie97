@@ -499,7 +499,7 @@ The thunderstorm route adjustment contrasts with the resolution guidance created
 The NGATC is deployed through Kubernetes, with each module being deployed along with its database. Multiple instances of each module are deployed to allow for redundant switchover and automatic load balancing handled automatically by Kubernetes. To ensure resilience against any physical events, instances of each module are commissioned at disparate geographic locations.
 
 ## Access Control
-Access control for the NGATC will utilize the Entitlement Service developed by Housemate Inc. The four roles defined for the NGATC are controllers, supervisors, administrators, pilots and internal modules. For all actions in the NGATC that are not "read-only", some level of authenticated access is required, with specifics discussed in the requirements and design details.
+Access control for the NGATC will utilize the Entitlement Service developed by Housemate Inc. The four roles defined for the NGATC are controllers, supervisors, administrators, pilots, trusted data sources and internal modules. For all actions in the NGATC that are not "read-only", some level of authenticated access is required, with specifics discussed in the requirements and design details.
 
 ## Persistence Strategy
 For each module, all information needed to restore to the current running point in the event of failure is stored persistently in a database, accessed using Hibernate. For classes that must be persisted, the module level designs outline what property in the class maps to the primary key that relates the object to the persistent database.
@@ -1039,6 +1039,7 @@ class Flight {
     - Manifest manifest
     - boolean isFlightAccepted
     + void acceptFlightPlanUpdate()
+    + void rejectFlightPlanUpdate()
     + void acceptFlight()
     + void addFlightLogEntry(FlightLogEntry entry)
     + void proposeNewFlightPlan(FlightPlan proposedFlightPlan)
@@ -1389,6 +1390,7 @@ The Flight class is the top level class that encapsulates all information relati
 | Method Name | Method Signature | Description |
 |--|--|--|
 | acceptFlightPlanUpdate | void acceptFlightPlanUpdate() | Accepts a proposed edit to the Flight's FlightPlan and replaces the flightPlan with the proposedUpdateToFlightPlan and communicates the updated plan to the pilot. |
+| rejectFlightPlanUpdate | void rejectFlightPlanUpdate() | Rejects the proposed update and removes it from the Flight. |
 | acceptFlight | void acceptFlight() | Signals that a new flight has been accepted into the NGATC and communicates the acceptance to the pilot. |
 | addFlightLogEntry | void addFlightLogEntry(FlightLogEntry entry) | Adds an entry in the flight's log. |
 | proposeNewFlightPlan | void proposeNewFlightPlan(FlightPlan proposedFlightPlan) | Adds a new flight plan proposal to the flight. |
@@ -1991,6 +1993,7 @@ class Flight {
     - Manifest manifest
     - boolean isFlightAccepted
     + void acceptFlightPlanUpdate()
+    + void rejectFlightPlanUpdate()
     + void acceptFlight()
     + void addFlightLogEntry(FlightLogEntry entry)
     + void proposeNewFlightPlan(FlightPlan proposedFlightPlan)
@@ -2231,6 +2234,7 @@ class FlightManager << (S,#FF7700) Singleton >> {
     + List<Area> getCloseAreas(Flight flight)
     + List<Waypoint> getCloseWaypoints(Flight flight)
     + List<Flight> getAllFlights()
+    + void main(String[] args)
 }
 
 FlightManager "1" *-- "*" Flight
@@ -2268,6 +2272,7 @@ class ApiController << (S,#FF7700) Singleton >> {
     + void sendFlightDecision(Flight newFlight, boolean isAccepted)
     + void receiveFlightPlanUpdate(Flight flight)
     + void sendFlightPlanUpdate(Flight flight, boolean isMandatory)
+    + void receiveFlightPlanUpdateDecision(Flight flight, FlightPlan proposedFlightPlan, boolean isAccepted)
     + void sendFlightWarning(FlightWarning warning)
     + void receiveSurveillanceInput(FlightDynamics dynamics)
     + void updateWaypoint(Waypoint waypoint)
@@ -2307,8 +2312,9 @@ The Flight class is the top level class that encapsulates all information relati
 ###### Methods
 | Method Name | Method Signature | Description |
 |--|--|--|
-| acceptFlightPlanUpdate | void acceptFlightPlanUpdate() | Accepts a proposed edit to the Flight's FlightPlan and replaces the flightPlan with the proposedUpdateToFlightPlan and communicates the updated plan to the pilot. |
-| acceptFlight | void acceptFlight() | Signals that a new flight has been accepted into the NGATC and communicates the acceptance to the pilot. |
+| acceptFlightPlanUpdate | void acceptFlightPlanUpdate() | Accepts a proposed edit to the Flight's FlightPlan and replaces the flightPlan with the proposedUpdateToFlightPlan. |
+| rejectFlightPlanUpdate | void rejectFlightPlanUpdate() | Rejects the proposed update and removes it from the Flight. |
+| acceptFlight | void acceptFlight() | Signals that a new flight has been accepted into the NGATC. |
 | addFlightLogEntry | void addFlightLogEntry(FlightLogEntry entry) | Adds an entry in the flight's log. |
 | proposeNewFlightPlan | void proposeNewFlightPlan(FlightPlan proposedFlightPlan) | Adds a new flight plan proposal to the flight. |
 | updateFlight | void updateFlight(FlightDynamics newDynamics) | Updates a Flight with updated FlightDynamics. |
@@ -2597,6 +2603,7 @@ The FlightManager is the main class responsible for predicting Flight trajectori
 | getCloseAreas | List<Area> getCloseAreas(Flight flight) | Gets all the Areas within the current flight's region (as defined by the location hash key) and its neighbors. This is provided primarily as a resource to the AI agents. |
 | getCloseWaypoints | List<Waypoint> getCloseWaypoints(Flight flight) | Gets all the Waypoints within the current flight's region (as defined by the location hash key) and its neighbors. This is provided primarily as a resource to the AI agents. |
 | getAllFlights | List<Flight> getAllFlights() | Returns a list of all tracked Flights. This is provided primarily as a resources to the AI agents. |
+| main | void main(String[] args) | The main method of the module. Used to start the needed AI agents and start a thread to analyze all flights and report the module status every second. |
 
 ###### Associations
 | Association Name | Type | Description |
@@ -2638,6 +2645,7 @@ The ApiController class is a singleton class used to send and receive messages t
 | sendFlightDecision | void sendFlightDecision(Flight newFlight, boolean isAccepted) | Sends the accept/reject decision for a new flight to the Controller module. |
 | receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight) | Receives an updated flight plan. |
 | sendFlightPlanUpdate | void sendFlightPlanUpdate(Flight flight, boolean isMandatory) | Sends an update to a flight plan to the Controller module. |
+| receiveFlightPlanUpdateDecision | void receiveFlightPlanUpdateDecision(Flight flight, FlightPlan proposedFlightPlan, boolean isAccepted) | Receives an accept/reject decision for a FlightPlan update. |
 | sendFlightWarning | void sendFlightWarning(FlightWarning warning) | Sends a warning to the Controller module. |
 | receiveSurveillanceInput | void receiveSurveillanceInput(FlightDynamics dynamics) | Receives surveillance input and applies the input to the appropriate flight. |
 | updateWaypoint | void updateWaypoint(Waypoint waypoint) | Updates a Waypoint with information from the Static Map module. |
@@ -2646,3 +2654,80 @@ The ApiController class is a singleton class used to send and receive messages t
 | removeArea | void removeArea(Area area) | Removes an Area |
 | reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event, such as a FlightWarning or failure to the System Monitor module. |
 | reportStatus | void reportStatus() | Report's the module's status to the System Monitor module every second. |
+
+### Service API
+The Flight Tracker module implements the follow REST API interface:
+
+* New Flight Proposal: Receives a proposal for a new flight that will be either accepted or rejected.
+    * Inputs:
+        * Flight: A JSON encoded Flight object representing the new flight.
+        * Access Token: Requires an internal module role
+    * Output: HTTP status. The accept/reject decision will be sent asynchronously.
+* Flight Plan Update: Receives an updated flight plan.
+    * Inputs:
+        * Flight: A JSON encoded Flight object with the new FlightPlan.
+        * Access Token: Requires an internal module role
+    * Output: HTTP status.
+* Surveillance Input: Receives a surveillance input reading.
+    * Inputs:
+        * Dynamics: A JSON encoded FlightDynamics object representing surveillance input.
+        * Access Token: Requires an internal module or trusted data source role
+    * Output: HTTP status.
+* Update Waypoint:
+    * Inputs:
+        * Waypoint: The updated Waypoint in JSON encoding
+        * Access Token: Requires an internal module role
+    * Output: HTTP status
+* Remove Waypoint:
+    * Inputs:
+        * Waypoint: The removed Waypoint in JSON encoding
+        * Access Token: Requires an internal module role
+    * Output: HTTP status
+* Update Area:
+    * Inputs:
+        * Area: The updated Area in JSON encoding
+        * Access Token: Requires an internal module or trusted data source role
+    * Output: HTTP status
+* Remove Area:
+    * Inputs:
+        * Area: The removed Area in JSON encoding
+        * Access Token: Requires an internal module or trusted data source role
+    * Output: HTTP status
+
+### Sequence Diagram
+The following sequence diagram will illustrate how the Flight Tracker module as an AI agent to avoid severe weather.
+
+```plantuml
+@startuml
+title Flight Tracker AI Assisted Re-Routing
+scale max 800 width
+
+actor "Weather Module" as weather
+actor "Controller Module" as ctrl
+participant ApiController as api
+participant FlightManager as mgr
+participant AiRouteOptimizationAgent as ai
+participant "Flight:\nflight1" as flight
+
+weather -> api : Report thunderstorm
+api -> api : updateArea(thunderstorm1)
+api -> mgr : addArea(thunderstorm1)
+ai -> ai : Detects better route to avoid thunderstorm
+ai -> flight : proposeNewFlightPlan(proposedFlightPlan)
+flight -> api : sendFlightPlanUpdate(flight1, false)
+api -> ctrl : Send updated flight plan to controller for approval
+alt Update approved
+    ctrl -> api : Controller module approves.
+    api -> api : receiveFlightPlanUpdateDecision(flight1, proposedFlightPlan, true)
+    api -> flight : acceptFlightPlanUpdate()
+else Update rejected
+    ctrl -> api : Controller module rejects.
+    api -> api : receiveFlightPlanUpdateDecision(flight1, proposedFlightPlan, false)
+    api -> flight : rejectFlightPlanUpdate()
+end
+
+@enduml
+```
+
+This diagram depicts how an AI agent is used for this type of route optimization, with the proposal being accepted or rejected by a human operator.
+
