@@ -3819,3 +3819,101 @@ The ApiController class is responsible for interacting with the other modules of
 | giveSurveillanceInput | void giveSurveillanceInput(FlightDynamics dynamics) | Sends a surveillance input to the Flight Tracker module in the same manner as an external data source. |
 | reportStatus | void reportStatus() | Reports the module's status to the System Monitor module. |
 
+### Service API
+The Simulator module implements the following API services:
+
+* New Flight Proposal Response
+    * Inputs:
+        * Flight: The Flight in JSON encoding
+        * Is Accepted: A boolean indicating whether the new flight has been accepted
+        * Access Token: Requires an internal module role
+    * Output: HTTP Status
+* Update Flight Plan:
+    * Inputs:
+        * Flight: The Flight in JSON Encoding
+        * Is Urgent: Whether updating the Flight Plan is urgent (e.g. emergency conflict resolution)
+        * Access Token: Requires an internal module role
+    * Output: HTTP status
+* Flight Plan Update Response:
+    * Inputs:
+        * Flight: The Flight in JSON Encoding
+        * Flight Plan: The proposed flight plan in JSON encoding
+        * Is Accepted: Whether the flight plan update was accepted
+        * Access Token: Requires an internal module role
+    * Output: HTTP status
+* Receive Pilot Message:
+    * Inputs:
+        * Flight: The Flight in JSON encoding
+        * Message: The message to be sent
+        * Access Token: Requires an internal module role
+    * Output: HTTP status
+
+### CLI Documentation
+The Simulation module CLI shall support the following commands:
+* New Flight:
+``new_flight <path to flight JSON file>``
+
+* Flight Plan Update Proposal:
+``propose_flight_plan <path to flight JSON file>``
+
+* Send Pilot Message:
+``send_pilot_message <path to flight JSON file> "<Message Text>"``
+
+* Send Weather Report:
+``send_weather_report <path to weather report JSON file>``
+
+* Send Severe Weather Event:
+``send_severe_weather_event <path to severe weather JSON file>``
+
+* Send Surveillance Input:
+``send_surveillance_input <path to flight dynamics JSON file>``
+
+* Login User:
+``login <username> <password>``
+
+* Logout User:
+``logout``
+
+### Sequence Diagram
+The following sequence diagram illustrates how the Simulator module interacts with the CLI and the rest of the NGATC to provision a flight.
+
+```plantuml
+@startuml
+title Simulator Module Sequence Diagram
+scale max 800 width
+
+actor "CLI User" as user
+participant "CliDriver" as cli
+participant "ApiController" as api
+database "Business Domain Classes" as cls
+actor "Controller Module" as ctrl
+
+user -> cli : new_flight flight.json
+cli -> cli : parseCommand("new_flight flight.json")
+cli -> cli : parseNewFlightCommand("new_flight flight.json")
+cli -> cls : Create business domain classes
+cli -> api : sendNewFlightProposal(newFlight)
+api -> ctrl : Send new flight proposal
+ctrl -> api : Flight proposal accepted
+api -> api : receiveFlightDecision(newFlight, true)
+api -> cli : parseCommand("newFlight Accepted")
+@enduml
+```
+
+This diagram illustrates how the CLI stands in for pilots or other external data sources and communicates information to the rest of the NGATC in the same manner as these data sources.
+
+### Entitlement Service Integration
+The Simulator module requires authentication to interact with the CLI and with its API. Interacting with the CLI requires the administrator role and interacting with the API requires the internal module role.
+
+### Object Persistence
+Object persistence is achieved through the Hibernate framework, with database primary keys matches those of the implementation modules.
+
+### Testing Strategy
+The module level testing strategy for the Simulator module is as follows:
+* CLI input test:
+    * Send a variety of CLI inputs and ensure the module sends the correct REST API requests as a response
+* CLI output test:
+    * Send a variety of REST API requests to the module and ensure the module prints the correct response to the CLI
+
+### Risks
+The primary risk of the simulator module is that a user or the system would mistakenly use this module instead of the real system. For this reason, authenticated access is tightly controlled to administrator users. Additionally, a risk with all "non-core" modules is that the module could be used as a gateway into the system for a malicious user. To guard against this, authentication is required to access the CLI and the module's REST API.
