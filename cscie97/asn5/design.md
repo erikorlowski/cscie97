@@ -3892,6 +3892,7 @@ user -> cli : new_flight flight.json
 cli -> cli : parseCommand("new_flight flight.json")
 cli -> cli : parseNewFlightCommand("new_flight flight.json")
 cli -> cls : Create business domain classes
+cls --> cli
 cli -> api : sendNewFlightProposal(newFlight)
 api -> ctrl : Send new flight proposal
 ctrl -> api : Flight proposal accepted
