@@ -1923,7 +1923,7 @@ The create user dialog box is shown below:
 
 ![Create User Dialog Box](./CreateUser.jpg)
 
-The Controller window is the window that flight controllers interact with the control flights. It is shown below. Of note, this interface supports the drag and drop transfer of aircraft between sectors. Also of note is that messages are color coded between read and unread and warnings are color coded by severity.
+The Controller window is the window that flight controllers interact with the control flights. It is shown below. Of note, this interface supports the drag and drop transfer of aircraft between sectors. Also of note is that messages are color coded between read and unread and warnings are color coded by severity. It also supports the use of the scroll wheel to zoom in and out of the map.
 
 The map allows flight controllers to amend the flight plan by clicking on an aircraft and dragging and dropping waypoints.
 
@@ -3087,7 +3087,17 @@ The Static Map module is responsible for reporting to other modules the location
 ### Module Functional Requirement Summary
 The Static Map module implements the following system level functional requirements:
 
-* 
+* Loss of Separation Detection: The Static Map module shall provide information on static hazards on a request from another module.
+* Restricted Airspace Alerts: The Static Map module shall include restricted airspace in its reports to other modules.
+* Event Logging: The Static Map module shall log relevant system events to the System Monitor.
+* Module Health Monitoring: The Static Map module shall report its status to the System Monitor module every second.
+* Role Based Access: The Static Map module shall only allow UI access to administrator users and API access to internal module users.
+
+### Module Non-Functional Requirements
+* Redundance Services: The Static Map module shall be deployed with redundant instances, such that in the event of a failure, another instance will automatically take over.
+* Horizontal Scalability: The Static Map module shall be implemented such that additional instances can be provisioned to handle additional loading.
+* New Data Sources: The Static Map module shall expose a REST API to enable easy integration of additional data sources.
+* Module Testability: The Static Map module shall be implemented in a way that enables independent testing of the module using simulated data.
 
 ### Static Map Module Classes
 The classes that make up the Static Map module are shown below with greater detail given in the class dictionary.
@@ -3161,12 +3171,12 @@ class RestrictedAirspace {
 
 Airspace <|-- RestrictedAirspace
 
-interface Visitable {
+interface StaticMapObject {
     + accept(Visitor visitor)
 }
 
-Visitable <|.. Area
-Visitable <|.. Waypoint
+StaticMapObject <|.. Area
+StaticMapObject <|.. Waypoint
 
 interface Visitor {
     + void visit(Area area)
@@ -3189,19 +3199,19 @@ Visitor ..> Landmark
 Visitor ..> Airport
 
 class BuildSpreadsheetVisitor {
-
+    + ConcurrentHashMap<int, ArrayList<String>> buildSpreadsheet(Class class)
 }
 
 Visitor <|.. BuildSpreadsheetVisitor
 
 class MapReportVisitor {
-
+    + List<StaticMapObject> buildMapReport()
 }
 
 Visitor <|.. MapReportVisitor
 
 class StaticMapUi {
-    - spreadsheetStrategy
+    - Spreadsheet spreadsheetStrategy
     + void renderLoginPage()
     + void renderSpreadsheetPage()
     + void renderSpreadsheetTabs()
@@ -3308,3 +3318,154 @@ LogEvent --> Severity
 
 @enduml
 ```
+
+#### Class Dictionary
+##### Location
+A GPS coordinate with an altitude.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| latitude | double | The GPS latitude with north as positive. |
+| longitude | double | The GPS longitude with east as positive. |
+| altitudeFeet | double | The altitude in feet above sea level. |
+
+##### Waypoint
+Describes a location augmented with a name.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A globally unique ID of the waypoint, used as the primary key in the database. |
+| name | String | The name of the waypoint. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| location | Location | The location of the waypoint. |
+
+##### Area
+Represents an area in the NGATC system.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| id | long | A globally unique ID, used as the primary key in the database. |
+| type | String | A String indicating the type of area. |
+| radiusMiles | double | The radius of the area in miles. |
+| name | String | The name of the area. |
+| description | String | A description of the area. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| boundaries | ArrayList<Location> | An ordered list of the boundaries of the area. |
+
+##### Airspace
+A type of area describing a volume of airspace.
+
+###### Properties
+| Property Name | Type | Description |
+|--|--|--|
+| upperLimitFeet | double | The upper limit of airspace altitude. |
+| lowerLimitFeet | double | The lower limit of the airspace altitude. |
+
+##### RestrictedAirspace
+A type of Airspace that is restricted for civil aviation.
+
+##### MapManager
+The MapManager contains references to hash maps for each type of object that can be created in the Static Map module, as well as getters for each of these maps (not shown for readability). The hash key for each element is its ID.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| main | void main(String[] args) | Starts a thread to report the system status to the System Monitor module every second. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| waypointMap | ConcurrentHashMap<long, Waypoint> | A map containing the Waypoints in the module. |
+| areaMap | ConcurrentHashMap<long, Area> | A map containing the Areas in the module. |
+| airspaceMap | ConcurrentHashMap<long, Airspace> | A map containing the Airspaces in the module. |
+| landmarkMap | ConcurrentHashMap<long, Landmark> | A map containing the Landmarks in the module. |
+| buildingMap | ConcurrentHashMap<long, Building> | A map containing the Buildings in the module. |
+| terrainMap | ConcurrentHashMap<long, Terrain> | A map containing the Terrains in the module. |
+| restrictedAirspaceMap | ConcurrentHashMap<long, RestrictedAirspace> | A map containing the RestrictedAirspaces in the module. |
+| airportMap | ConcurrentHashMap<long, Airport> | A map containing the Airports in the module. |
+
+##### StaticMapUi
+The StaticMapUi is the base class for the UI administrators will interact with to input static objects. It uses the strategy design pattern to maintain a reference for the correct spreadsheet for the objects the user is interacting with.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| renderLoginPage | void renderLoginPage() | Renders a panel for users to login. |
+| renderSpreadsheetPage | void renderSpreadsheetPage() | Renders the current spreadsheet page, or the login page if the spreadsheetStrategy is null. |
+| renderSpreadsheetTabs | void renderSpreadsheetTabs() | Renders the tabs for each spreadsheet page. |
+| switchSpreadsheetTab | void switchSpreadsheetTab(Spreadsheet newSpreadsheet) | Switches the spreadsheet page when another tab is selected. |
+
+###### Associations
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| spreadsheetStrategy | Spreadsheet | A reference to the type of spreadsheet to display using the strategy design pattern. |
+
+##### Spreadsheet
+The Spreadsheet abstract class is used to render and interact with spreadsheets for the objects users can create in the Static Map module. A concrete class is created for each of the objects that can be created (not shown in the class dictionary for brevity).
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| renderSpreadsheet | void renderSpreadsheet() | Renders the spreadsheet to the user. |
+| postSpreadsheetEdit | void postSpreadsheetEdit() | Updates the objects in the MapManager with the information in the spreadsheet. |
+| findElement | int findElement(String name) | Finds the element by name and returns the row of the element in the spreadsheet. |
+
+###### Associations
+| Association Name | Type | Description |
+|--|--|--|
+| grid | ConcurrentHashMap<int, ArrayList<String>> grid | A representation of the cells of the spreadsheet and their contents. |
+
+##### StaticMapObject
+The StaticMapObject interface is used to enable the visitor design pattern on the objects that users can create in the Static Map module. It is implemented by the classes that users can create.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| accept | void accept() | Performs some visitor specific action on the object. |
+
+##### Visitor
+The visitor interface is used to enabled the visitor design pattern for a variety of interactions with the objects created in the Static Map module. The interface contains a visit() method for each type of object created by users in this module.
+
+##### BuildSpreadsheetVisitor
+Used to build the contents of a spreadsheet for a specific class.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| buildSpreadsheet | ConcurrentHashMap<int, ArrayList<String>> buildSpreadsheet(Class class) | Uses the MapManager to build the contents of the spreadsheet for the specified class. |
+
+##### MapReportVisitor
+Used to build a report of objects to other modules.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| buildMapReport | List<StaticMapObject> buildMapReport() | Uses the MapManager to build a report of all created objects in this module. |
+
+##### ApiController
+The ApiController class is a singleton class used to send and receive messages through the module's REST API.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| reportMap | void reportMap() | Builds a map report to send to another module. |
+| reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event, such as a FlightWarning or failure to the System Monitor module. |
+| reportStatus | void reportStatus() | Report's the module's status to the System Monitor module every second. |
+
+### Service API
+The Flight Tracker module implements the follow REST API interface:
+
+* Report Map: Build a map report of all the static map objects in this module.
+    * Inputs:
+        * Access Token: Requires an internal module role
+    * Output: A JSON encoded list of all the objects in this module.
