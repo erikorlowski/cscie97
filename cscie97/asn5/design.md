@@ -876,6 +876,7 @@ The TrackedModuleController class is used to generate HTTP responses to REST API
 The Service Monitor module implements the following API services:
 
 * Log Event: Log a new system event.
+    * Path: POST/event
     * Inputs:
         * Event Severity (2=CRITICAL, 1=WARNING, 0=INFO)
         * Event Source (A String containing information about the module originating the event)
@@ -884,6 +885,7 @@ The Service Monitor module implements the following API services:
         * Access Token
     * Output: HTTP Status
 * Read Events: Return all logged system events.
+    * Path: GET/events
     * Inputs: Access Token
     * Outputs: A list of logged events in the form:
         * Event Severity (2=CRITICAL, 1=WARNING, 0=INFO)
@@ -891,23 +893,27 @@ The Service Monitor module implements the following API services:
         * Event Info (A String with full information about the event)
         * Event Timestamp (Number of milliseconds past the Unix epoch)
 * New Module: Add a new module for status tracking.
+    * Path: POST/module
     * Inputs:
         * Module ID (String with the module name)
         * Status (3=HEALTHY, 2=DIMINISHED, 1=CRITICAL, 0=OFFLINE)
         * Access Token
     * Output: HTTP Status
 * Status Update: Update a tracked module's status.
+    * Path: PUT/module
     * Inputs:
         * Module ID (String with the module name)
         * Status (3=HEALTHY, 2=DIMINISHED, 1=CRITICAL, 0=OFFLINE)
         * Access Token
     * Output: HTTP Status
 * Remove Module: Remove the module from tracking.
+    * Path: DELETE/module
     * Inputs:
         * Module ID (String with the module name)
         * Access Token
     * Output: HTTP Status
 * Read Module Statuses: Returns the status of all tracked modules.
+    * Path: GET/modules
     * Inputs: Access Token
     * Output: A list of tracked modules in the form:
         * Module ID (String with the module name)
@@ -1826,39 +1832,46 @@ The ApiController class is a singleton class used to send and receive messages t
 The Controller module implements the following API services:
 
 * New Flight Proposal
+    * Path: POST/flight
     * Inputs:
         * Flight: The Flight in JSON encoding
         * Access Token: Requires a Pilot role
     * Output: HTTP Status, the accept/reject decision will be communicated asynchronously
 * Flight Tracker New Flight Decision:
+    * Path: POST/flight
     * Inputs:
         * Flight: The Flight in JSON encoding
         * Is Accepted: A boolean representing whether the new flight was accepted
         * Access Token: Requires an internal module role
     * Output: HTTP status
 * Update Flight Plan:
+    * Path: PUT/flightPlan
     * Inputs:
         * Flight: The Flight in JSON Encoding
         * Is Mandatory: Whether updating the Flight Plan is mandatory (e.g. emergency conflict resolution)
         * Access Token: Requires an internal module role
     * Output: HTTP status
 * Flight Warning:
+    * Path: POST/warning
     * Inputs:
         * Warning: A FlightWarning in JSON encoding
         * Access Token: Requires an internal module role
     * Output: HTTP status
 * Receive Pilot Message:
+    * Path: POST/message
     * Inputs:
         * Flight: The Flight in JSON encoding
         * Message: The message to be sent
         * Access Token: Requires a Pilot role
     * Output: HTTP status
 * Update Flights:
+    * Path: PUT/flights
     * Inputs:
         * Flights: All currently active flights in JSON encoding
         * Access Token: Requires an internal module role
     * Output: HTTP status
 * Update Module Statuses:
+    * Path: PUT/modules
     * Inputs:
         * Statuses: A list of TrackedModules in JSON encoding
         * Access Token: Requires an internal module role
@@ -2729,16 +2742,19 @@ The ApiController class is a singleton class used to send and receive messages t
 The Flight Tracker module implements the follow REST API interface:
 
 * New Flight Proposal: Receives a proposal for a new flight that will be either accepted or rejected.
+    * Path: POST/flight
     * Inputs:
         * Flight: A JSON encoded Flight object representing the new flight.
         * Access Token: Requires an internal module role
     * Output: HTTP status. The accept/reject decision will be sent asynchronously.
 * Flight Plan Update: Receives an updated flight plan.
+    * Path: PUT/flightPlan
     * Inputs:
         * Flight: A JSON encoded Flight object with the new FlightPlan.
         * Access Token: Requires an internal module role
     * Output: HTTP status.
 * Surveillance Input: Receives a surveillance input reading.
+    * Path: PUT/surveillance
     * Inputs:
         * Dynamics: A JSON encoded FlightDynamics object representing surveillance input.
         * Access Token: Requires an internal module or trusted data source role
@@ -3054,15 +3070,18 @@ The ApiController class is a singleton class used to send and receive messages t
 The Flight Tracker module implements the follow REST API interface:
 
 * Give Weather Report: Receives a request for a weather report.
+    * Path: GET/weather
     * Inputs:
         * Access Token: Requires an internal module role
     * Output: A JSON encoded list of WeatherReport and SevereWeather objects.
 * Receive Weather Report: Receives a weather report from an external source.
+    * Path: PUT/report
     * Inputs:
         * Report: A JSON encoded WeatherReport object.
         * Access Token: Requires a Trusted Data Source role
     * Output: An HTTP status.
 * Receive Severe Weather: Receives a severe weather report from an external source.
+    * Path: PUT/severe
     * Inputs:
         * Report: A JSON encoded SevereWeather object.
         * Access Token: Requires a Trusted Data Source role
@@ -3516,6 +3535,7 @@ The ApiController class is a singleton class used to send and receive messages t
 The Flight Tracker module implements the follow REST API interface:
 
 * Report Map: Build a map report of all the StaticMap objects in this module.
+    * Path: GET/map
     * Inputs:
         * Access Token: Requires an internal module role
     * Output: A JSON encoded list of all the objects in this module.
@@ -3943,18 +3963,21 @@ The ApiController class is responsible for interacting with the other modules of
 The Simulator module implements the following API services:
 
 * New Flight Proposal Response
+    * Path: GET/newFlightResponse
     * Inputs:
         * Flight: The Flight in JSON encoding
         * Is Accepted: A boolean indicating whether the new flight has been accepted
         * Access Token: Requires an internal module role
     * Output: HTTP Status
 * Update Flight Plan:
+    * Path: PUT/flightPlanUpdate
     * Inputs:
         * Flight: The Flight in JSON Encoding
         * Is Urgent: Whether updating the Flight Plan is urgent (e.g. emergency conflict resolution)
         * Access Token: Requires an internal module role
     * Output: HTTP status
 * Flight Plan Update Response:
+    * Path: PUT/flightPlanUpdateResponse
     * Inputs:
         * Flight: The Flight in JSON Encoding
         * Flight Plan: The proposed flight plan in JSON encoding
@@ -3962,6 +3985,7 @@ The Simulator module implements the following API services:
         * Access Token: Requires an internal module role
     * Output: HTTP status
 * Receive Pilot Message:
+    * Path: GET/pilotMessage
     * Inputs:
         * Flight: The Flight in JSON encoding
         * Message: The message to be sent
