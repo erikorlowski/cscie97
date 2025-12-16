@@ -179,46 +179,48 @@ javac -d . asn4/housemate/entitlement/*.java
 
 #### Classpath Notes
 
-When compiling and running, ensure the classpath includes:
-1. Current directory (`.`) for compiled classes
-2. Path to compiled entitlement service classes (`asn4`)
+When compiling with `-d .` from the `cscie97/cscie97` directory, the class files are placed in `cscie97/cscie97/cscie97/asn5/ngatc/...` (nested structure). To run the application, you need to:
+1. Navigate to the parent `cscie97` directory (one level up from where you compiled)
+2. Use `-cp cscie97` to point to the directory containing the compiled classes
 
 ### Starting the System
 
-**Run these commands from: `cscie97` directory**
+**Navigate to: `C:\harvard\cscie97` (or equivalent parent directory)**
 
 ```bash
+cd C:\harvard\cscie97
+
 # Production mode (without simulator)
-java cscie97.asn5.ngatc.Main
+java -cp cscie97 cscie97.asn5.ngatc.Main
 
 # Testing mode (with simulator)
-java cscie97.asn5.ngatc.Main --simulator
+java -cp cscie97 cscie97.asn5.ngatc.Main --simulator
 ```
 
 ### Starting Individual Modules
 
-**Run these commands from: `cscie97` directory**
+**Run these commands from: `C:\harvard\cscie97` directory**
 
 Each module can be run independently for testing:
 
 ```bash
 # System Monitor
-java cscie97.asn5.ngatc.systemmonitor.SystemMonitorService
+java -cp cscie97 cscie97.asn5.ngatc.systemmonitor.SystemMonitorService
 
 # Weather Service
-java cscie97.asn5.ngatc.weather.WeatherService
+java -cp cscie97 cscie97.asn5.ngatc.weather.WeatherService
 
 # Static Map Service
-java cscie97.asn5.ngatc.staticmap.StaticMapService
+java -cp cscie97 cscie97.asn5.ngatc.staticmap.StaticMapService
 
 # Flight Tracker Service (Safety Critical)
-java cscie97.asn5.ngatc.flighttracker.FlightTrackerService
+java -cp cscie97 cscie97.asn5.ngatc.flighttracker.FlightTrackerService
 
 # Controller Service
-java cscie97.asn5.ngatc.controller.ControllerService
+java -cp cscie97 cscie97.asn5.ngatc.controller.ControllerService
 
 # Simulator (Testing Only)
-java cscie97.asn5.ngatc.simulator.SimulatorService
+java -cp cscie97 cscie97.asn5.ngatc.simulator.SimulatorService
 ```
 
 ## Module APIs
