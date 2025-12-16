@@ -377,16 +377,13 @@ control --> weather : Get weather data for map
 control --> map : Get static map elements for controller map
 tracker --> weather : Get weather info for flight planning
 tracker --> map : Get static hazards for flight planning
-tracker --> info : Get aircraft properties for flight planning
-monitor ..> weather
-monitor --> control : Controller UI displays system health.
-monitor ..> tracker
-monitor ..> map
-monitor ..> info
-weather --> sim
-tracker --> sim
-map --> sim
-control ..> sim : Sends controller actions to simulator
+weather ..> monitor
+control ..> monitor
+tracker ..> monitor
+map ..> monitor
+sim --> weather
+sim --> tracker
+sim --> control
 
 tracker ---> data
 weather --> weatherData
