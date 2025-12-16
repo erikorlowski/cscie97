@@ -716,6 +716,21 @@ enum Severity {
     INFO
 }
 
+class DatabaseException {
+    - String message
+}
+
+TrackedModuleService ..> DatabaseException
+LogEventService ..> DatabaseException
+
+class ApiException {
+    - String request
+    - String message
+}
+
+TrackedModuleController ..> ApiException
+LogEventController ..> ApiException
+
 @enduml
 ```
 
@@ -969,6 +984,9 @@ The following module level tests are specified for the System Monitor module:
 * Verify that the events can be read
 * Attempt to read the events with an invalid access token
 * Verify the API service is rejected
+
+### Exception Handling
+Exceptions for the System Monitor module are handled primarily through the DatabaseException and ApiException classes. These exception classes are unchecked exceptions and are logged for future auditing.
 
 ### Risks
 For this module, the primary risk is security. For this reason, it is imperative that API request to this module have access protections. For module statuses, a malicious actor could potentially perform a denial of service attack by spoofing statuses claiming that modules were offline. A malicious actor could also spoof statuses claiming that the modules were healthy, masking actual issues with the modules. For event logging, a malicious actor accessing the NGATC event logs could potentially learn valuable information about the system that could be used for an attack.
@@ -1389,6 +1407,26 @@ class LogEvent {
 }
 
 LogEvent --> Severity
+
+class DatabaseException {
+    - String message
+}
+
+SectorManager ..> DatabaseException
+
+class ApiException {
+    - String request
+    - String message
+}
+
+ApiController ..> ApiException
+
+class CommunicationsException {
+    - String request
+    - String message
+}
+
+ApiController ..> CommunicationsException
 
 @enduml
 ```
@@ -1887,6 +1925,9 @@ The module level testing for the Controller module is described below:
     * Two sectors are merged by an administrator
     * A sector is split by an administrator
 
+### Exception Handling
+Exceptions for the Controller module are handled primarily through the DatabaseException, CommunicationsException and ApiException classes. These exception classes are unchecked exceptions and are logged for future auditing.
+
 ### Risks
 Many of the risks that would typically be considered in an air traffic control system have been segregated out of this module by leaving it separate from the Flight Tracker module. This leaves much of the flight validation and conflict detection in its own module. A risk in this module is that it is responsible for communicating with pilots, and any outage of this communication could have significant consequences. For this reason, redundant instances of this module are commissioned in Kubernetes, which mitigates the risk of a communications failure.
 
@@ -2298,6 +2339,24 @@ class LogEvent {
 
 LogEvent --> Severity
 
+class DatabaseException {
+    - String message
+}
+
+FlightManager ..> DatabaseException
+
+class ApiException {
+    - String request
+    - String message
+}
+
+ApiController ..> ApiException
+
+class SurveillanceException {
+    - String message
+}
+
+ApiController ..> SurveillanceException
 
 @enduml
 ```
@@ -2758,6 +2817,9 @@ The module level testing for the Flight Tracker module is as follows:
     * Simulated inputs are sent to show a flight deviating from its flight plan
     * Is is verified that a warning is sent to reflect this deviation
 
+### Exception Handling
+Exceptions for the Flight Tracker module are handled primarily through the DatabaseException, SurveillanceException and ApiException classes. These exception classes are unchecked exceptions and are logged for future auditing.
+
 ### Risks
 The Flight Tracker module is a safety critical module that is required to work with a very high degree of reliability. Using the terminology of functional safety, the "Safety Function" of this module is to detect an imminent collision of an aircraft and report it, along with suitable resolution guidance within 1 second of detection. A few of the failures that could cause this safety function to fail are:
 
@@ -2880,6 +2942,25 @@ class ApiController << (S,#FF7700) Singleton >> {
 ApiController ..> WeatherReport
 ApiController ..> LogEvent
 ApiController ..> TrackedModule
+
+class DatabaseException {
+    - String message
+}
+
+WeatherManager ..> DatabaseException
+
+class ApiException {
+    - String request
+    - String message
+}
+
+ApiController ..> ApiException
+
+class WeatherInputException {
+    - String message
+}
+
+ApiController ..> WeatherInputException
 
 @enduml
 ```
@@ -3029,6 +3110,9 @@ The module testing strategy for the Weather module is as follows:
     * Let some, but not all of the SevereWeather events expire
     * Receive some WeatherReports to override existing ones
     * Receive a request for a weather report and verify it is correct.
+
+### Exception Handling
+Exceptions for the Weather module are handled primarily through the DatabaseException, WeatherInputException and ApiException classes. These exception classes are unchecked exceptions and are logged for future auditing.
 
 ### Risks
 The two risks for the Weather module are that a weather report is incorrect, or that a malicious actor could do damage to the NGATC system through this module. The first risk is mitigated by allowing for diverse weather data sources by providing a simple and well defined API. The second risk is mitigated by using the Entitlement Service to control access to the module's API.
@@ -3269,6 +3353,19 @@ class LogEvent {
 
 LogEvent --> Severity
 
+class DatabaseException {
+    - String message
+}
+
+MapManager ..> DatabaseException
+
+class ApiException {
+    - String request
+    - String message
+}
+
+ApiController ..> ApiException
+
 @enduml
 ```
 
@@ -3473,6 +3570,9 @@ The module testing strategy for the Static Map module is as follows. UI interact
     * A map report is requested and verified to be correct
     * Some objects are edited in the Static Map module
     * A map report is requested and verified to be correct
+
+### Exception Handling
+Exceptions for the Static Map module are handled primarily through the DatabaseException and ApiException classes. These exception classes are unchecked exceptions and are logged for future auditing.
 
 ### Risks
 The primary risk for this module is the security risk for a malicious actor making changes in this module, or potentially using this module to gain greater access to the rest of the NGATC system. For this reason, the Entitlement Service is used to control access to the module through the UI and the API.
@@ -3783,6 +3883,20 @@ class LogEvent {
 
 LogEvent --> Severity
 
+class DatabaseException {
+    - String message
+}
+
+CliDriver ..> DatabaseException
+
+class ApiException {
+    - String request
+    - String message
+}
+
+ApiController ..> ApiException
+
+
 @enduml
 ```
 
@@ -3921,6 +4035,9 @@ The module level testing strategy for the Simulator module is as follows:
     * Send a variety of CLI inputs and ensure the module sends the correct REST API requests as a response
 * CLI output test:
     * Send a variety of REST API requests to the module and ensure the module prints the correct response to the CLI
+
+### Exception Handling
+Exceptions for the Simulator module are handled primarily through the DatabaseException and ApiException classes. These exception classes are unchecked exceptions and are logged for future auditing.
 
 ### Risks
 The primary risk of the simulator module is that a user or the system would mistakenly use this module instead of the real system. For this reason, authenticated access is tightly controlled to administrator users. Additionally, a risk with all "non-core" modules is that the module could be used as a gateway into the system for a malicious user. To guard against this, authentication is required to access the CLI and the module's REST API.
