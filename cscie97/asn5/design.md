@@ -1359,12 +1359,7 @@ class ApiController << (S,#FF7700) Singleton >> {
     + void receiveMessageFromPilot(Flight flight, String message)
     + void sendMessageToSector(ControlSector sector, String message)
     + void receiveFlights()
-    + void updateWaypoint(Waypoint waypoint)
-    + void removeWaypoint(Waypoint waypoint)
-    + void updateArea(Area area)
-    + void removeArea(Area area)
-    + void reportLogEvent(LogEvent event)
-    + void receiveModuleStatuses(ArrayList<TrackedModule>)
+    + void receiveStaticMap()
     + void reportStatus()
     + void requestWeatherReport()
 }
@@ -1777,10 +1772,7 @@ The ApiController class is a singleton class used to send and receive messages t
 | receiveMessageFromPilot | void receiveMessageFromPilot(Flight flight, String message) | Receives a message from a pilot and adds the message to the appropriate sector. |
 | sendMessageToSector | void sendMessageToSector(ControlSector sector, String message) | Sends a message to another sector encoded with the source sector. |
 | receiveFlights | void receiveFlights() | Receives all the currently active flights from the Flight Tracker module, updates their FlightDynamics and ensures they are in the correct sector. |
-| updateWaypoint | void updateWaypoint(Waypoint waypoint) | Receives an updated waypoint from the Static Map module. |
-| removeWaypoint | void removeWaypoint(Waypoint waypoint) | Receives the removal of a waypoint from the Static Map module. |
-| updateArea | void updateArea(Area area) | Receives an updated area from the Static Map module. |
-| removeArea | void removeArea(Area area) | Receives the removal of an area from the Static Map module. |
+| receiveStaticMap | void receiveStaticMap() | Requests a list of static map objects from the Static Map module. |
 | reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event to the System Monitor module. |
 | receiveModuleStatuses | void receiveModuleStatuses(ArrayList<TrackedModule>) | Receives the status of all NGATC modules. |
 | reportStatus | void reportStatus() | Report's the module's status to the System Monitor module every second. |
@@ -1820,26 +1812,6 @@ The Controller module implements the following API services:
 * Update Flights:
     * Inputs:
         * Flights: All currently active flights in JSON encoding
-        * Access Token: Requires an internal module role
-    * Output: HTTP status
-* Update Waypoint:
-    * Inputs:
-        * Waypoint: The updated Waypoint in JSON encoding
-        * Access Token: Requires an internal module role
-    * Output: HTTP status
-* Remove Waypoint:
-    * Inputs:
-        * Waypoint: The removed Waypoint in JSON encoding
-        * Access Token: Requires an internal module role
-    * Output: HTTP status
-* Update Area:
-    * Inputs:
-        * Area: The updated Area in JSON encoding
-        * Access Token: Requires an internal module role
-    * Output: HTTP status
-* Remove Area:
-    * Inputs:
-        * Area: The removed Area in JSON encoding
         * Access Token: Requires an internal module role
     * Output: HTTP status
 * Update Module Statuses:
@@ -2296,10 +2268,7 @@ class ApiController << (S,#FF7700) Singleton >> {
     + void receiveFlightPlanUpdateDecision(Flight flight, FlightPlan proposedFlightPlan, boolean isAccepted)
     + void sendFlightWarning(FlightWarning warning)
     + void receiveSurveillanceInput(FlightDynamics dynamics)
-    + void updateWaypoint(Waypoint waypoint)
-    + void removeWaypoint(Waypoint waypoint)
-    + void updateArea(Area area)
-    + void removeArea(Area area)
+    + void void receiveStaticMap()
     + void reportLogEvent(LogEvent event)
     + void reportStatus()
     + requestWeatherReport()
@@ -2686,10 +2655,7 @@ The ApiController class is a singleton class used to send and receive messages t
 | receiveFlightPlanUpdateDecision | void receiveFlightPlanUpdateDecision(Flight flight, FlightPlan proposedFlightPlan, boolean isAccepted) | Receives an accept/reject decision for a FlightPlan update. |
 | sendFlightWarning | void sendFlightWarning(FlightWarning warning) | Sends a warning to the Controller module. |
 | receiveSurveillanceInput | void receiveSurveillanceInput(FlightDynamics dynamics) | Receives surveillance input and applies the input to the appropriate flight. |
-| updateWaypoint | void updateWaypoint(Waypoint waypoint) | Updates a Waypoint with information from the Static Map module. |
-| removeWaypoint | void removeWaypoint(Waypoint waypoint) | Removes a Waypoint. |
-| updateArea | void updateArea(Area area) | Updates an Area with information from the Static Map module. |
-| removeArea | void removeArea(Area area) | Removes an Area |
+| receiveStaticMap | void receiveStaticMap() | Requests static map objects from the Static Map module. |
 | reportLogEvent | void reportLogEvent(LogEvent event) | Reports an event, such as a FlightWarning or failure to the System Monitor module. |
 | reportStatus | void reportStatus() | Report's the module's status to the System Monitor module every second. |
 | requestWeatherReport | void requestWeatherReport() | Runs in a thread once per second to request a weather report from the Weather module. The information is then incorporated into the FlightManager. |
@@ -2712,26 +2678,6 @@ The Flight Tracker module implements the follow REST API interface:
         * Dynamics: A JSON encoded FlightDynamics object representing surveillance input.
         * Access Token: Requires an internal module or trusted data source role
     * Output: HTTP status.
-* Update Waypoint:
-    * Inputs:
-        * Waypoint: The updated Waypoint in JSON encoding
-        * Access Token: Requires an internal module role
-    * Output: HTTP status
-* Remove Waypoint:
-    * Inputs:
-        * Waypoint: The removed Waypoint in JSON encoding
-        * Access Token: Requires an internal module role
-    * Output: HTTP status
-* Update Area:
-    * Inputs:
-        * Area: The updated Area in JSON encoding
-        * Access Token: Requires an internal module or trusted data source role
-    * Output: HTTP status
-* Remove Area:
-    * Inputs:
-        * Area: The removed Area in JSON encoding
-        * Access Token: Requires an internal module or trusted data source role
-    * Output: HTTP status
 
 ### Sequence Diagram
 The following sequence diagram will illustrate how the Flight Tracker module as an AI agent to avoid severe weather.
@@ -3465,7 +3411,7 @@ The ApiController class is a singleton class used to send and receive messages t
 ### Service API
 The Flight Tracker module implements the follow REST API interface:
 
-* Report Map: Build a map report of all the static map objects in this module.
+* Report Map: Build a map report of all the StaticMap objects in this module.
     * Inputs:
         * Access Token: Requires an internal module role
     * Output: A JSON encoded list of all the objects in this module.
