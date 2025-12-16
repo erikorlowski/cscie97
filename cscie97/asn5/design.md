@@ -416,6 +416,15 @@ The Static Map module is responsible for managing the airspace map, including st
 ### Simulator
 The Simulator module is responsible for providing mock data to the modules of the NGATC, as well as consuming information from the NGATC to inform this mock data.
 
+## Module Instability and Abstractness Metrics
+The plot of module instability and abstractness is shown below.
+
+![Module Instability vs. Abstractness](./Module%20Instability%20vs.%20Abstractness.png)
+
+For the NGATC system, this metric is somewhat complicated by the reality that many modules are sharing business domain classes, making the instability metric difficult to calculate in a meaningful way. However, it is evident that lower level modules, such as the Static Map and Weather modules are on the more stable side of the chart, as compared to high level modules, such as the Simulator.
+
+The modules do somewhat follow the "Main Sequence", although they are skewed toward concreteness because of the large number of concrete business domain classes used in this design.
+
 ## Module Communications
 Modules communicate with each other and with external services through REST APIs. Communication between modules is encrypted using TLS encryption.
 
@@ -529,7 +538,7 @@ Module testing validates an individual module's behavior. It is performed by ing
 ### System Testing
 System testing is used to validate the NGATC's behavior as a "closed box". In system tests, the data for the NGATC to act upon are simulated through the Simulation module and user interactions with system GUIs are simulated using [Functionize](https://www.functionize.com/?_gl=1*12iaepr*_up*MQ..*_ga*MTMyMzYyNjUzMi4xNzY1MzEwMDI0*_ga_77JHMZYNHZ*czE3NjUzMTAwMjMkbzEkZzAkdDE3NjUzMTAwMjMkajYwJGwwJGgyMDExNDMyMDUy).
 
-#### Happy Path Test
+#### Happy Path Testa
 * Mock weather, map and aircraft type data are input through the simulator
 * Multiple flight plans are submitted that should be accepted
 * It is validated that these flight plans are accepted
