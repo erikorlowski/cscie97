@@ -417,7 +417,7 @@ The Weather module is responsible for ingesting weather reports and providing th
 The Static Map module is responsible for managing the airspace map, including static hazards (e.g. mountains and tall buildings), restricted airspace and landmarks (e.g. airports). This information is consumed by the Flight Tracker and Controller modules.
 
 ### Simulator
-The Simulator module is responsible for providing mock data to the modules of the NGATC, as well as consuming information from the NGATC to inform this mock data. Furthermore, the Simulator module will report to the modules that are consuming it whether the system is in production or simulated mode. An administrator can interact with the Simulator module through a command line interface to enable and disable simulation mode.
+The Simulator module is responsible for providing mock data to the modules of the NGATC, as well as consuming information from the NGATC to inform this mock data.
 
 ## Module Communications
 Modules communicate with each other and with external services through REST APIs. Communication between modules is encrypted using TLS encryption.
@@ -3482,3 +3482,340 @@ When a user is not logged in, the following page will appear prompting the user 
 During normal operation, the Static Map UI will appear as follows. This will allow administrators to submit changes to objects. CTRL+F find functionality, as well as scrolling is also available to users.
 
 ![Static Map Main Page](./StaticMap.jpg)
+
+## Simulator Module
+The Simulator module is used for testing and training purposes to simulate external inputs into the NGATC. The module allows administrators to enter mock inputs into the system using a command line interface and to view the data that would be sent to pilots. The general principal behind the design of this module is that inputs should be able to be sent through the Simulator module if and only if they would come from an external source in "real life".
+
+### Module Functional Requirements Summary
+The Simulator module shall implement the following system level requirements:
+* Simulation Mode: Users with an administrator role shall have access to send the following information to the NGATC through the Simulator module CLI. Additionally, these users shall be able to view information sent to pilots through the Simulator module CLI.
+    * New flight proposals
+    * Flight plan updates
+    * Surveillance Inputs
+    * Weather Data
+
+### Module Non-Functional Requirements Summary
+* Role-Based Authentication: The Simulator module shall require the administrator role to access its CLI.
+* Simulation Testing: The Simulator module shall be configured with a CLI such that it can be used for system level testing.
+
+### Simulator Module Classes
+The following classes make up the Simulator module. More details about these classes are presented in the class dictionary.
+
+```plantuml
+@startuml
+title Simulator Module Class Diagram
+scale max 800 width
+
+class Flight {
+    - long id
+    - String callSign
+    - java.time.Instant departureTime
+    - java.time.Instant eta
+    - String flightStatus
+    - int passengerCount
+    - double fuelAmountPounds
+    - double availableFlightTimeSeconds
+    - double remainingFlightTimeSeconds
+    - FlightPlan flightPlan
+    - FlightPlan proposedUpdateToFlightPlan
+    - FlightDynamics requestedFlightDynamics
+    - FlightDynamics actualFlightDynamics
+    - Aircraft aircraft
+    - ArrayList<FlightLogEntry> flightLogEntries
+    - Manifest manifest
+    - boolean isFlightAccepted
+    + void acceptFlightPlanUpdate()
+    + void rejectFlightPlanUpdate()
+    + void acceptFlight()
+    + void addFlightLogEntry(FlightLogEntry entry)
+    + void proposeNewFlightPlan(FlightPlan proposedFlightPlan)
+    + void updateFlight(FlightDynamics newDynamics)
+}
+
+Flight "1" --> "1" FlightPlan
+
+Flight  "1" --> "2" FlightDynamics
+
+Flight  "1" --> "1" Aircraft
+
+Flight "1" *-- "*" FlightLogEntry
+
+Flight  "1" --> "1" Manifest
+
+class FlightPlan {
+    - long id
+    - java.time.Instant departureTime
+    - java.time.Instant eta
+    - ArrayList<Waypoint> waypoints
+}
+
+FlightPlan "1" *-- "*" Waypoint
+
+class FlightDynamics {
+    - double attitude
+    - double heading
+    - double speedKnots
+    - Location location
+    - Trajectory trajectory
+    - Waypoint targetWaypoint
+}
+
+FlightDynamics  "1" --> "1" Location
+FlightDynamics  "1" --> "1" Trajectory
+FlightDynamics "1" --> "1" Waypoint
+
+class Location {
+    - double latitude
+    - double longitude
+    - double altitudeFeet
+}
+
+class Benchmark {
+    - java.time.Instant time
+    - Location location
+}
+
+Benchmark "1" --> "1" Location
+
+class Trajectory {
+    - LinkedList<Benchmark> benchmarks
+}
+
+Trajectory "1" *-- "*" Benchmark
+
+class Aircraft {
+    - long id
+    - String callSign
+    - String readiness
+    - AircraftModel model
+    - FlightLog flightLog
+}
+
+Aircraft "1" --> "1" AircraftModel
+Aircraft "1" --> "1" FlightLog
+
+class AircraftModel {
+    - long id
+    - String manufacturer
+    - String type
+    - double ceilingFeet
+    - double stallSpeedKnots
+    - double cruisingSpeedKnots
+    - double maxSpeedKnots
+    - int passengerCapacity
+    - double fuelCapacityPounds
+    - double rangeMiles
+}
+
+class FlightLog {
+    - long id
+    - java.time.Instant startDate
+    - LinkedList<FlightLogEntry> flightLogEntries
+}
+
+FlightLog "1" *-- "*" FlightLogEntry
+
+class FlightLogEntry {
+    - long id
+    - String flightRecord
+}
+
+class Manifest {
+    - ArrayList<CrewMember> crewMembers
+    - ArrayList<Passenger> passengers
+}
+
+Manifest "1" *-- "*" CrewMember
+Manifest "1" *-- "*" Passenger
+
+class Passenger {
+    - long id
+    - String name
+    - java.time.Instant dateOfBirth
+}
+
+class CrewMember {
+    - long id
+    - String name
+    - java.time.Instant dateOfBirth
+    - String role
+}
+
+class Waypoint {
+    - long id
+    - String name
+    - Location location
+}
+
+Waypoint "1" <-- Location
+
+class Area {
+    - long id
+    - String type
+    - double radiusMiles
+    - String name
+    - String description
+    - ArrayList<Location> boundaries
+}
+
+Area "1" *-- "*" Location
+
+class Airspace {
+    - double upperLimitFeet
+    - double lowerLimitFeet
+}
+
+Area <|-- Airspace
+
+
+class FlightWarning {
+    - long id
+    - java.time.Instant time
+    - Severity severity
+    - ArrayList<Flight> flightsInDanger
+}
+
+class MidAirCollisionWarning {
+    - double timeBeforeCollisionSeconds
+    - double distanceToCollisionMiles
+    - String counterMeasureInstructions
+}
+
+FlightWarning <|-- MidAirCollisionWarning
+FlightWarning "1" o-- "*" Flight
+FlightWarning "1" --> "1" Severity
+
+
+class ObstructionWarning {
+    - double timeBeforeCollisionSeconds
+    - double distanceToCollisionMiles
+    - String counterMeasureInstructions
+}
+
+FlightWarning <|-- ObstructionWarning
+
+class DeviationWarning {
+    - String message
+}
+
+FlightWarning <|-- DeviationWarning
+
+class SevereWeather {
+    - java.time.Instant expirationTime
+    - String warningDescription
+}
+
+Airspace <|-- SevereWeather
+
+class WeatherReport {
+    - double temperatureCelsius
+    - double windSpeedKnots
+    - double windHeading
+    - Location location
+}
+
+Area <|-- WeatherReport
+
+enum Severity {
+    CRITICAL
+    WARNING
+    INFO
+}
+
+class CliDriver {
+    + void main(String[] args)
+    + void parseCommand(String commandText)
+    + void parseNewFlightCommand(String commandText)
+    + void parseFlightPlanUpdateProposalCommand(String commandText)
+    + void parseMessageFromPilotCommand(String commandText)
+    + void parseWeatherReportCommand(String commandText)
+    + void parseSevereWeatherCommand(String commandText)
+    + void parseSurveillanceInputCommand(String commandText)
+    + void handleLoginRequest(String commandText)
+    + void handleLogoutRequest(String commandText)
+    + void printOutput(String output)
+}
+
+CliDriver ..> ApiController
+CliDriver ..> Flight
+CliDriver ..> FlightPlan
+CliDriver ..> WeatherReport
+CliDriver ..> SevereWeather
+CliDriver ..> FlightDynamics
+
+class ApiController << (S,#FF7700) Singleton >> {
+    + void sendNewFlightProposal(Flight newFlight)
+    + void receiveFlightDecision(Flight newFlight, boolean isAccepted)
+    + void sendFlightPlanUpdateProposal(Flight flight)
+    + void receiveFlightPlanUpdate(Flight flight, boolean isUrgent)
+    + void receiveResponseToFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isAccepted)
+    + void sendMessageFromPilot(Flight flight, String message)
+    + void receiveMessageToPilot(Flight flight, String message)
+    + void giveWeatherReport(WeatherReport report)
+    + void giveSevereWeatherEvent(SevereWeather weather)
+    + void giveSurveillanceInput(FlightDynamics dynamics)
+    + void reportStatus()
+}
+
+ApiController ..> Flight
+ApiController ..> FlightPlan
+ApiController ..> FlightWarning
+ApiController ..> Waypoint
+ApiController ..> LogEvent
+ApiController ..> WeatherReport
+ApiController ..> SevereWeather
+ApiController ..> FlightDynamics
+
+class LogEvent {
+    - Severity severity
+    - String source
+    - String info
+    - int id
+    - java.time.Instant timestamp
+    + LogEvent(Severity severity, String source, String info, Instance timestamp)
+}
+
+LogEvent --> Severity
+
+@enduml
+```
+
+#### Class Dictionary
+***Note:** Business domain classes used in the NGATC are omitted from this class dictionary for the sake of brevity. Please consult the implementing modules for more information about these classes.*
+
+##### CliDriver
+The CliDriver class is responsible for interacting with the Simulator module command line interface. It handles incoming commands, handles login requests and prints information received from the REST API.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| main | void main(String[] args) | The main method for the module. This method listens for new input to the CLI and starts a thread that runs every second to report the module's status to the System Monitor module. |
+| parseCommand | void parseCommand(String commandText) | The top level command parsing method. This method is responsible for receiving a command and delegating its handling to a more specific method. |
+| parseNewFlightCommand | void parseNewFlightCommand(String commandText) | Parses a command to propose a new flight and passes the information received to the ApiController for input into the NGATC system. |
+| parseFlightPlanUpdateProposalCommand | void parseFlightPlanUpdateProposalCommand(String commandText) | Parses a command to propose a flight plan update and passes the information received to the ApiController for input into the NGATC system. |
+| parseMessageFromPilotCommand | void parseMessageToPilotCommand(String commandText) | Parses a command to receive a mock message from a pilot and passes the information received to the ApiController for input into the NGATC system. |
+| parseWeatherReportCommand | void parseWeatherReportCommand(String commandText) | Parses a command to receive a weather report and passes the information received to the ApiController for input into the NGATC system. |
+| parseSevereWeatherCommand | void parseSevereWeatherCommand(String commandText) | Parses a command to receive a severe weather event and passes the information received to the ApiController for input into the NGATC system. |
+| parseSurveillanceInputCommand | void parseSurveillanceInputCommand(String commandText) | Parses a command to receive a surveillance input and passes the information received to the ApiController for input into the NGATC system. |
+| handleLoginRequest | void handleLoginRequest(String commandText) | Parses a command to login to the Simulator module and passes the information to the Entitlement Service. |
+| handleLogoutRequest | void handleLogoutRequest(String commandText) | Parses a command to logout of the Simulator module and passes the information to the Entitlement Service. |
+| printOutput | void printOutput(String output) | Outputs the text to the CLI. |
+
+##### ApiController
+The ApiController class is responsible for interacting with the other modules of the NGATC through a REST API in the same manner as external data sources.
+
+###### Methods
+| Method Name | Method Signature | Description |
+|--|--|--|
+| sendNewFlightProposal | void sendNewFlightProposal(Flight newFlight) | Sends a new flight proposal to the Controller module in the same manner as a pilot. |
+| receiveFlightDecision | void receiveFlightDecision(Flight newFlight, boolean isAccepted) | Receives an accept/reject decision for a new flight proposal from the Controller module in the same manner as a pilot and forwards this information to the CLI. |
+| sendFlightPlanUpdateProposal | void sendFlightPlanUpdateProposal(Flight flight) | Sends a flight plan update proposal to the Controller module in the same manner as a pilot. |
+| receiveFlightPlanUpdate | void receiveFlightPlanUpdate(Flight flight, boolean isUrgent) | Receives an update flight plan from the Controller module in the same manner as a pilot and forwards this information to the CLI. |
+| receiveResponseToFlightPlanUpdate | void receiveResponseToFlightPlanUpdate(Flight flight, FlightPlan proposedPlan, boolean isAccepted) | Receives an accept/reject decision for a flight plan update proposal from the Controller module in the same manner as a pilot and forwards this information to the CLI. |
+| sendMessageFromPilot | void sendMessageFromPilot(Flight flight, String message) | Sends a pilot message to the Controller module in the same manner as a pilot. |
+| receiveMessageToPilot | void receiveMessageToPilot(Flight flight, String message) | Receives a messages meant for a pilot and forwards this information to the CLI. |
+| giveWeatherReport | void giveWeatherReport(WeatherReport report) | Sends a weather report to the Weather module in the same manner as an external data source. |
+| giveSevereWeatherEvent | void giveSevereWeatherEvent(SevereWeather weather) | Sends a severe weather event to the Weather module in the same manner as an external data source. |
+| giveSurveillanceInput | void giveSurveillanceInput(FlightDynamics dynamics) | Sends a surveillance input to the Flight Tracker module in the same manner as an external data source. |
+| reportStatus | void reportStatus() | Reports the module's status to the System Monitor module. |
+
