@@ -3143,6 +3143,7 @@ Visitor ..> Building
 Visitor ..> Waypoint
 Visitor ..> Landmark
 Visitor ..> Airport
+Visitor ..> StaticMapObject
 
 class BuildSpreadsheetVisitor {
     + ConcurrentHashMap<int, ArrayList<String>> buildSpreadsheet(Class class)
@@ -3154,7 +3155,7 @@ class MapReportVisitor {
     + List<StaticMapObject> buildMapReport()
 }
 
-Visitor <|.. MapReportVisitor
+Visitor <|... MapReportVisitor
 
 class StaticMapUi {
     - Spreadsheet spreadsheetStrategy
@@ -3219,7 +3220,7 @@ class AirportSpreadsheet {
 
 }
 
-Spreadsheet <|.. AirportSpreadsheet
+Spreadsheet <|... AirportSpreadsheet
 
 class MapManager << (S,#FF7700) Singleton >> {
     - ConcurrentHashMap<long, Waypoint> waypointMap
@@ -3415,3 +3416,69 @@ The Flight Tracker module implements the follow REST API interface:
     * Inputs:
         * Access Token: Requires an internal module role
     * Output: A JSON encoded list of all the objects in this module.
+
+### Sequence Diagram
+The following sequence diagram illustrates the process editing and returning a report of StaticMapObjects.
+
+```plantuml
+title Static Map Module Sequence Diagram
+scale max 800 width
+
+actor User as user
+actor "Controller Module" as ctrl
+participant "StaticMapUi:\nuiInstance" as ui
+participant "BuildingSpreadsheet:\nbuildingSpreadsheetInstance" as sheet
+participant "BuildSpreadsheetVisitor:\nbuildSpreadsheetVisitorInstance" as vst
+participant "ApiController" as api
+participant "MapReportVisitor:\nmapReportVisitorInstance" as map
+
+user -> ui : Selects Buildings tab
+ui -> ui : switchSpreadsheetTab(buildingSpreadsheetInstance)
+ui -> sheet : renderSpreadsheetPage()
+sheet -> sheet: renderSpreadsheet()
+sheet -> vst : buildSpreadsheet(Building)
+vst --> sheet
+user -> sheet : Submits update
+sheet -> sheet : postSpreadsheetEdit()
+ctrl -> api : Requests map
+api -> api : reportMap()
+api -> map : buildMapReport()
+map --> api
+api --> ctrl
+
+```
+
+This diagram illustrates how the Static Map module communicates through the UI and its REST interface to maintain its objects and respond to API map requests.
+
+### Entitlement Service Integration
+The Static Map module requires users of the UI to have the administrator role and login through the UI and users of the API to have the internal module role. The Static Map module does not support user creation, which must be done through the Controller module UI.
+
+### Object Persistence
+The Static Map module uses the Hibernate framework for object persistence with primary keys noted in the class dictionary.
+
+### Testing Strategy
+The module testing strategy for the Static Map module is as follows. UI interactions will be automated through Functionize.
+
+* Static Map Test:
+    * A map report is requested with no objects to verify this works properly
+    * Objects are added to the Static Map module
+    * A map report is requested and verified to be correct
+    * Some objects are deleted from the Static Map module
+    * A map report is requested and verified to be correct
+    * Some objects are edited in the Static Map module
+    * A map report is requested and verified to be correct
+
+### Risks
+The primary risk for this module is the security risk for a malicious actor making changes in this module, or potentially using this module to gain greater access to the rest of the NGATC system. For this reason, the Entitlement Service is used to control access to the module through the UI and the API.
+
+### UI Wireframes
+
+#### Login Page
+When a user is not logged in, the following page will appear prompting the user to login.
+
+![Static Map Module Login](./Default.jpg)
+
+#### Main Page
+During normal operation, the Static Map UI will appear as follows. This will allow administrators to submit changes to objects. CTRL+F find functionality, as well as scrolling is also available to users.
+
+![Static Map Main Page](./StaticMap.jpg)
