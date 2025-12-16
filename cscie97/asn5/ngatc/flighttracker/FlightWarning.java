@@ -1,8 +1,9 @@
-package cscie97.asn5.ngatc.flighttracker;
+package cscie97.asn4.asn5.ngatc.flighttracker;
 
-import cscie97.asn5.ngatc.common.Severity;
 import java.time.Instant;
 import java.util.ArrayList;
+
+import cscie97.asn4.asn5.ngatc.common.Severity;
 
 /**
  * Base class for flight warnings.

@@ -1,10 +1,11 @@
-package cscie97.asn5.ngatc.staticmap;
+package cscie97.asn4.asn5.ngatc.staticmap;
 
-import cscie97.asn5.ngatc.common.Location;
-import cscie97.asn5.ngatc.common.Auth;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
+
+import cscie97.asn4.asn5.ngatc.common.Auth;
+import cscie97.asn4.asn5.ngatc.common.Location;
 
 /**
  * Main service for the Static Map module.

@@ -1,4 +1,4 @@
-package cscie97.asn5.ngatc.flighttracker;
+package cscie97.asn4.asn5.ngatc.flighttracker;
 
 import java.time.Instant;
 import java.util.ArrayList;

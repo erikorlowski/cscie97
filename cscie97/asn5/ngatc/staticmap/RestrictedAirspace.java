@@ -1,4 +1,4 @@
-package cscie97.asn5.ngatc.staticmap;
+package cscie97.asn4.asn5.ngatc.staticmap;
 
 /**
  * Represents restricted airspace that aircraft should not enter.

@@ -1,4 +1,4 @@
-package cscie97.asn5.ngatc.systemmonitor;
+package cscie97.asn4.asn5.ngatc.systemmonitor;
 
 /**
  * Exception thrown when database operations fail in the System Monitor module.

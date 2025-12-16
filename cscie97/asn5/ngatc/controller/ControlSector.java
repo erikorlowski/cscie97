@@ -1,9 +1,10 @@
-package cscie97.asn5.ngatc.controller;
+package cscie97.asn4.asn5.ngatc.controller;
 
-import cscie97.asn5.ngatc.staticmap.Airspace;
-import cscie97.asn5.ngatc.flighttracker.Flight;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+
+import cscie97.asn4.asn5.ngatc.flighttracker.Flight;
+import cscie97.asn4.asn5.ngatc.staticmap.Airspace;
 
 /**
  * Represents a control sector managed by a controller.

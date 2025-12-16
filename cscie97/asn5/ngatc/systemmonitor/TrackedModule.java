@@ -1,8 +1,9 @@
-package cscie97.asn5.ngatc.systemmonitor;
+package cscie97.asn4.asn5.ngatc.systemmonitor;
 
-import cscie97.asn5.ngatc.common.Status;
 import java.time.Duration;
 import java.time.Instant;
+
+import cscie97.asn4.asn5.ngatc.common.Status;
 
 /**
  * Represents a tracked module in the NGATC system.

@@ -1,8 +1,8 @@
-package cscie97.asn5.ngatc.flighttracker;
+package cscie97.asn4.asn5.ngatc.flighttracker;
 
-import cscie97.asn5.ngatc.common.Location;
-import cscie97.asn5.ngatc.common.Trajectory;
-import cscie97.asn5.ngatc.staticmap.Waypoint;
+import cscie97.asn4.asn5.ngatc.common.Location;
+import cscie97.asn4.asn5.ngatc.common.Trajectory;
+import cscie97.asn4.asn5.ngatc.staticmap.Waypoint;
 
 /**
  * Represents the flight dynamics (attitude, heading, speed, location) of an aircraft.

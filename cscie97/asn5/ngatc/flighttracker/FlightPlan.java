@@ -1,8 +1,9 @@
-package cscie97.asn5.ngatc.flighttracker;
+package cscie97.asn4.asn5.ngatc.flighttracker;
 
-import cscie97.asn5.ngatc.staticmap.Waypoint;
 import java.time.Instant;
 import java.util.ArrayList;
+
+import cscie97.asn4.asn5.ngatc.staticmap.Waypoint;
 
 /**
  * Represents a flight plan with departure time, ETA, and waypoints.

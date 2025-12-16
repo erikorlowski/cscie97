@@ -1,10 +1,11 @@
-package cscie97.asn5.ngatc.systemmonitor;
+package cscie97.asn4.asn5.ngatc.systemmonitor;
 
-import cscie97.asn5.ngatc.common.LogEvent;
-import cscie97.asn5.ngatc.common.Auth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import cscie97.asn4.asn5.ngatc.common.Auth;
+import cscie97.asn4.asn5.ngatc.common.LogEvent;
 
 /**
  * Service layer for LogEvent operations.

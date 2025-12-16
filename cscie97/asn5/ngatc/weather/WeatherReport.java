@@ -1,6 +1,6 @@
-package cscie97.asn5.ngatc.weather;
+package cscie97.asn4.asn5.ngatc.weather;
 
-import cscie97.asn5.ngatc.common.Location;
+import cscie97.asn4.asn5.ngatc.common.Location;
 
 /**
  * Represents a weather report for a specific location.

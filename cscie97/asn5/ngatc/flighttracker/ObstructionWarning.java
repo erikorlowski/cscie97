@@ -1,6 +1,6 @@
-package cscie97.asn5.ngatc.flighttracker;
+package cscie97.asn4.asn5.ngatc.flighttracker;
 
-import cscie97.asn5.ngatc.common.Severity;
+import cscie97.asn4.asn5.ngatc.common.Severity;
 
 /**
  * Warning for collision with static obstacles (terrain, buildings).

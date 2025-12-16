@@ -1,7 +1,8 @@
-package cscie97.asn5.ngatc.staticmap;
+package cscie97.asn4.asn5.ngatc.staticmap;
 
-import cscie97.asn5.ngatc.common.Location;
 import java.util.ArrayList;
+
+import cscie97.asn4.asn5.ngatc.common.Location;
 
 /**
  * Base class for geographic areas (terrain, buildings, airspace).

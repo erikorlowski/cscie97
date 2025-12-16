@@ -1,16 +1,17 @@
-package cscie97.asn5.ngatc.simulator;
+package cscie97.asn4.asn5.ngatc.simulator;
 
-import cscie97.asn5.ngatc.common.Location;
-import cscie97.asn5.ngatc.common.Auth;
-import cscie97.asn5.ngatc.flighttracker.Flight;
-import cscie97.asn5.ngatc.flighttracker.FlightPlan;
-import cscie97.asn5.ngatc.flighttracker.FlightDynamics;
-import cscie97.asn5.ngatc.weather.WeatherReport;
-import cscie97.asn5.ngatc.staticmap.Airport;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+
+import cscie97.asn4.asn5.ngatc.common.Auth;
+import cscie97.asn4.asn5.ngatc.common.Location;
+import cscie97.asn4.asn5.ngatc.flighttracker.Flight;
+import cscie97.asn4.asn5.ngatc.flighttracker.FlightDynamics;
+import cscie97.asn4.asn5.ngatc.flighttracker.FlightPlan;
+import cscie97.asn4.asn5.ngatc.staticmap.Airport;
+import cscie97.asn4.asn5.ngatc.weather.WeatherReport;
 
 /**
  * Simulator module for testing and training purposes.

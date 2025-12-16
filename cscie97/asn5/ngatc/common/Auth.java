@@ -1,4 +1,4 @@
-package cscie97.asn5.ngatc.common;
+package cscie97.asn4.asn5.ngatc.common;
 
 import cscie97.asn4.housemate.entitlement.EntitlementServiceApi;
 import cscie97.asn4.housemate.entitlement.InvalidAccessTokenException;

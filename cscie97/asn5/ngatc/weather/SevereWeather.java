@@ -1,8 +1,9 @@
-package cscie97.asn5.ngatc.weather;
+package cscie97.asn4.asn5.ngatc.weather;
 
-import cscie97.asn5.ngatc.common.Location;
 import java.time.Instant;
 import java.util.ArrayList;
+
+import cscie97.asn4.asn5.ngatc.common.Location;
 
 /**
  * Represents a severe weather area (e.g., thunderstorms, turbulence).

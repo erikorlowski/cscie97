@@ -1,4 +1,4 @@
-package cscie97.asn5.ngatc.common;
+package cscie97.asn4.asn5.ngatc.common;
 
 /**
  * Enumeration representing module health status in the NGATC system.

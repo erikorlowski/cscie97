@@ -1,9 +1,10 @@
-package cscie97.asn5.ngatc.systemmonitor;
+package cscie97.asn4.asn5.ngatc.systemmonitor;
 
-import cscie97.asn5.ngatc.common.Status;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import cscie97.asn4.asn5.ngatc.common.Status;
 
 /**
  * Subject in the Observer pattern for module status tracking.

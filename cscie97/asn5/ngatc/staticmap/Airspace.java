@@ -1,4 +1,4 @@
-package cscie97.asn5.ngatc.staticmap;
+package cscie97.asn4.asn5.ngatc.staticmap;
 
 /**
  * Represents an airspace area with altitude limits.

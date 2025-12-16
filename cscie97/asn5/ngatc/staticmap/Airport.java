@@ -1,6 +1,6 @@
-package cscie97.asn5.ngatc.staticmap;
+package cscie97.asn4.asn5.ngatc.staticmap;
 
-import cscie97.asn5.ngatc.common.Location;
+import cscie97.asn4.asn5.ngatc.common.Location;
 
 /**
  * Represents an airport.

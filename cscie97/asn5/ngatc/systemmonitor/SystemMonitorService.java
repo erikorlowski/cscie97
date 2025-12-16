@@ -1,9 +1,10 @@
-package cscie97.asn5.ngatc.systemmonitor;
+package cscie97.asn4.asn5.ngatc.systemmonitor;
 
-import cscie97.asn5.ngatc.common.LogEvent;
-import cscie97.asn5.ngatc.common.Severity;
-import cscie97.asn5.ngatc.common.Status;
 import java.time.Instant;
+
+import cscie97.asn4.asn5.ngatc.common.LogEvent;
+import cscie97.asn4.asn5.ngatc.common.Severity;
+import cscie97.asn4.asn5.ngatc.common.Status;
 
 /**
  * Main service class for the System Monitor module.
